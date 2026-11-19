@@ -16,7 +16,13 @@ royale-style matches and as a public site. Live via Netlify from `main` of `rely
 - `/tyler` (Netlify rewrite in netlify.toml) or `#tyler` = FULL builder mode with every feature. Flags: `CASUAL` / `FULL`, body class `casual`/`full`.
 
 ## File map
-- `index.html` — GENERATED, the deployed site. Never hand-edit; edit `src/` and rebuild.
+- `index.html`, `lite.html` — GENERATED (the deployed site). Never hand-edit; edit `src/` and rebuild.
+- `lite.html` (from `src/lite.template.html`) — tour video (`lite-tour.mp4`, poster `lite-poster.jpg`) behind the glass panel for weak devices.
+  The check is the inline script at the top of the viewer template (no WebGL2 / software GL / ≤2 GB+≤2 cores) plus the
+  casual fps check (<12 fps twice after the step-down). `?live=1` skips it for the visit, `?lite=1` forces it.
+  Re-render the video after big visual changes: `python3 tools/test/render_tour.py 0 45 24 /tmp/frames 960 540` (~50 min) then ffmpeg (see CHANGELOG v1.0.47).
+- `src/events.js` — schedule shared by both pages: Versus feed `/api/public/maximus-events`, falls back to `FALLBACK_EVENTS`.
+- `src/icons.json` — gold vector icon set (traced from a Higgsfield sheet); `icon(name)` renders it with the `#goldG` gradient.
 - `src/colosseum.js` — procedural geometry (`buildColosseum(THREE, mergeGeometries, logos, opts)`); materials `M`; groups merged per material.
   `opts.slice` cuts ring meshes into 8 wedges (viewer only), `opts.lod` adds `StatuesLow`. Also used by the GLB exporter.
 - `src/viewer.template.html` — viewer: renderer, sky cubemap, galaxy panels, post (AO, glow, cinematic), tours, match day,
@@ -32,8 +38,14 @@ royale-style matches and as a public site. Live via Netlify from `main` of `rely
 - Coplanar/near-coplanar surfaces flicker on phones: keep floor layers ≥ 2–3 cm apart; logarithmic depth is off on phones/weak GPUs.
 - NaN pixels blow up the glow pass into black blocks: shaders clamp `1-dot()` before `pow`; a scrub pass runs before bloom.
 - User's PC uses Intel HD 630 (weak iGPU): `weakGPU` detection lowers pixels, disables soft shadows/AO by default. Test perf impact of anything new.
+- Headless test browser has no GPU, so the page would redirect to lite: every test script opens `index.html?live=1`.
 - Headless test browser has no GPU — fps numbers there are meaningless; compare triangle/draw-call counts instead.
 - `mm` = smoothed match-day amount (0..1); `tickers` = per-frame callbacks; `views` = camera presets; `looks` = Look toggles.
+
+## Shared knowledge vault
+Tyler's vault (on his PC, `~/knowledge-vault`, shared with OpenCode) has this project at
+`knowledge/projects/intergalactic-colosseum/README.md`. Follow its CLAUDE.md: plain language, short staging notes,
+never commit the vault (OpenCode backs it up), talk to OpenCode through `_bridge/`.
 
 ## User preferences
 - Version name in every download file name and message. No tiny text on banners/flyers.

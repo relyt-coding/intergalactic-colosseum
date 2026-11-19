@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.47
+- Lite mode: `lite.html` plays a pre-rendered Grand Arrival tour (`lite-tour.mp4`, 960×540, 24 fps, 8.5 MB) behind the same glass panel, with Replay / Schedule / Live 3D. The still `lite-poster.jpg` shows if the video can't play.
+- Weak-device check at the top of the live page: no WebGL2, software-only graphics, or ≤2 GB memory + ≤2 cores → lite. Casual page also switches if it stays under 12 fps after the automatic step-down. `?live=1` skips the check for the visit; `?lite=1` forces lite. `/tyler` and OBS links are never redirected.
+- Schedule moved to `src/events.js` (shared by both pages): reads `https://versusroyale.com/api/public/maximus-events`, falls back to the built-in list.
+- Video recipe: `python3 tools/test/render_tour.py 0 45 24 <dir> 960 540` (virtual clock, AO off), then
+  `ffmpeg -framerate 24 -i <dir>/%05d.jpg -vf "hqdn3d=6:5:10:10,fade=t=in:st=0:d=0.6,fade=t=out:st=44.2:d=0.8,format=yuv420p" -c:v libx264 -preset slow -crf 30 -movflags +faststart -an lite-tour.mp4`.
+- Test scripts open `index.html?live=1` (the headless browser has no GPU).
+
 ## v1.0.46
 - Replaced the emojis in the casual panel and tour list with a custom gold icon set (generated in Higgsfield, traced to vector paths in `src/icons.json`, gold gradient `#goldG`): galaxy, crossed swords, temple, laurel, shuttle, play, film camera, calendar, sound, muted.
 

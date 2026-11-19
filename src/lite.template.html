@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intergalactic Colosseum</title>
+<meta name="description" content="Step into the Intergalactic Colosseum: a 3D arena in space, presented by Maximus Law.">
+<meta property="og:title" content="Intergalactic Colosseum">
+<meta property="og:image" content="/preview.jpg">
+<meta name="theme-color" content="#05061a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;background:#05061a;color:#efe8ff;font-family:Inter,system-ui,sans-serif;overflow:hidden}
+  #bg{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;background:#05061a url(lite-poster.jpg) center/cover no-repeat}
+  #shade{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 60% 50%,transparent 45%,rgba(3,3,14,.55))}
+  .liteNote{padding:0 14px 12px;font-size:13px;line-height:1.4;color:#cfc8f2;text-align:center}
+  .liteNote a{color:#ffe2a0}
+/*__PANEL_CSS__*/
+<body class="casual lite">
+<video id="bg" autoplay muted loop playsinline preload="auto" poster="lite-poster.jpg">
+  <source src="lite-tour.mp4" type="video/mp4">
+</video>
+<div id="shade"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="goldG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3cf"/><stop offset=".5" stop-color="#e2b04f"/><stop offset="1" stop-color="#9a6a24"/></linearGradient></defs></svg>
+<aside id="events" aria-label="Versus x Maximus Games">
+  <div class="evHead"><h2>Versus<span class="x">×</span>Maximus Games</h2><p>Season schedule</p></div>
+  <div class="evBody">
+    <section data-ev="list" class="on"><div id="evList"></div></section>
+  </div>
+  <p class="liteNote">You're watching the tour video, made for lighter devices.</p>
+  <div class="evDock">
+    <button id="eReplay" data-ico="play">Replay</button>
+    <button id="eSched" data-ico="calendar">Schedule</button>
+    <button id="eLive" data-ico="galaxy">Live 3D</button>
+  </div>
+</aside>
+<script>
+const ICONS = /*__ICONS__*/;
+function icon(n) { return ICONS[n] ? `<svg class="ico" viewBox="0 0 240 240" aria-hidden="true"><path fill="url(#goldG)" fill-rule="evenodd" d="${ICONS[n]}"/></svg>` : ''; }
+/*__EVENTS_JS__*/
+const evEl = document.getElementById('events'), video = document.getElementById('bg');
+loadEvents(document.getElementById('evList'));
+evEl.querySelectorAll('[data-ico]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.ico)));
+const phone = () => matchMedia('(max-width:640px)').matches;
+const eSched = document.getElementById('eSched');
+const sync = () => eSched.classList.toggle('on', phone() && evEl.classList.contains('open'));
+eSched.onclick = () => { evEl.classList.toggle('open'); sync(); };
+addEventListener('resize', sync);
+document.getElementById('eReplay').onclick = () => { video.currentTime = 0; video.play().catch(() => {}); };
+// "Live 3D": go to the real thing and stop sending this visit back here
+document.getElementById('eLive').onclick = () => { location.href = './?live=1'; };
+// the still picture (poster) stays up if the video can't play
+video.addEventListener('error', () => video.removeAttribute('src'), true);
+video.play().catch(() => {});
+</script>
+</body>
+</html>

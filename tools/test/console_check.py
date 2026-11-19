@@ -13,7 +13,7 @@ async def main():
             elif u.startswith('file:'): await r.continue_()
             else: await r.abort()
         await pg.route('**/*', route)
-        await pg.goto('file://' + __import__('os').path.abspath('index.html') + ''); await pg.wait_for_timeout(15000)
+        await pg.goto('file://' + __import__('os').path.abspath('index.html') + '?live=1'); await pg.wait_for_timeout(15000)
         from collections import Counter
         print(Counter(m for m in msgs if 'Failed to load' not in m[1]).most_common(10))
         await b.close()

@@ -12,7 +12,7 @@ async def run(path):
             elif u.startswith('file:'): await r.continue_()
             else: await r.abort()
         await pg.route('**/*', route)
-        await pg.goto('file://'+path); await pg.wait_for_timeout(12000)
+        await pg.goto('file://'+path+'?live=1'); await pg.wait_for_timeout(12000)
         out={}
         for v in ['overview','arena','gate','doorway','statues']:
             await pg.evaluate(f"(()=>{{const [p,q]=window.__vw('{v}');}})()") if False else None

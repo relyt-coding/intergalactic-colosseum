@@ -3,6 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+// v1.0.47 lite mode: devices that can't run the live 3D get the pre-rendered tour instead (lite.html).
+// Skipped for /tyler, OBS links, and anyone who tapped "Try live 3D" (?live=1, remembered for this visit).
+(function () { try {
+  var q = location.search, h = location.hash;
+  if (/tyler/i.test(location.pathname + h) || /obs/i.test(h)) return;
+  if (/[?&]live=1/.test(q)) sessionStorage.setItem('colosseum-live', '1');
+  if (sessionStorage.getItem('colosseum-live') === '1') return;
+  var lite = /[?&]lite=1/.test(q);
+  if (!lite) {
+    var gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) lite = true;
+    else {
+      var e = gl.getExtension('WEBGL_debug_renderer_info'), n = e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : '';
+      if (/swiftshader|llvmpipe|software|basic render/i.test(n)) lite = true;
+      var lc = gl.getExtension('WEBGL_lose_context'); if (lc) lc.loseContext();
+    }
+    if ((navigator.deviceMemory || 8) <= 2 && (navigator.hardwareConcurrency || 8) <= 2) lite = true;
+  }
+  if (lite) location.replace('lite.html');
+} catch (e) {} })();
+</script>
 <title>Intergalactic Colosseum</title>
 <meta name="description" content="Step into the Intergalactic Colosseum: a 3D arena in space, presented by Maximus Law. Tours, match day, royale fights and more.">
 <meta property="og:title" content="Intergalactic Colosseum">
@@ -1532,30 +1554,10 @@ document.getElementById('aTour').onclick = () => (drawer.classList.contains('ope
 document.getElementById('stopTour').onclick = stopTour;
 
 // ---- v1.0.44 casual events panel ----
-const EVENTS = [
-  { date: '2026-11-22', name: 'Super Mario 64 Royale', url: 'https://versusroyale.com' },
-  { date: '2026-11-29', name: 'Super Smash Bros Ultimate Tournament', url: 'https://versusroyale.com' },
-  { date: '2026-12-05', name: 'Mario Kart 8 Deluxe Tournament', url: 'https://versusroyale.com' },
-  { date: '2026-12-13', name: 'Super Mario Galaxy Royale', url: 'https://versusroyale.com' },
-  { date: '2026-12-19', name: 'Versus Gauntlet', sub: 'Sponsored by Maximus', url: 'https://versusroyale.com' },
-];
+/*__EVENTS_JS__*/
 if (CASUAL) {
   const evEl = document.getElementById('events'), evList = document.getElementById('evList');
-  const DOW = ['SUN','MON','TUE','WED','THU','FRI','SAT'], MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  let nextMarked = false;
-  for (const ev of EVENTS) {
-    const [y, m, d] = ev.date.split('-').map(Number), dt = new Date(y, m - 1, d);
-    const past = dt < today, row = document.createElement('div');
-    row.className = 'ev' + (past ? ' past' : '');
-    if (!past && !nextMarked) { row.classList.add('next'); nextMarked = true; }
-    row.innerHTML = `<div class="d"><small>${DOW[dt.getDay()]}</small><b>${d}</b><small>${MON[m - 1]}</small></div>
-      <div class="t"><b></b>${ev.sub ? '<span></span>' : ''}</div>${past ? '<span class="tag">Ended</span>' : ''}<a target="_blank" rel="noopener">Sign up</a>`;
-    row.querySelector('.t b').textContent = ev.name;
-    if (ev.sub) row.querySelector('.t span').textContent = ev.sub;
-    row.querySelector('a').href = ev.url;
-    evList.appendChild(row);
-  }
+  loadEvents(evList);
   // move the existing tour + camera panes into the glass panel
   evEl.querySelector('[data-ev=tours]').appendChild(document.getElementById('tourList'));
   const camGrid = drawer.querySelector('[data-pane=camera] .grid');
@@ -2485,7 +2487,7 @@ if (softwareGPU) gpuWarn.classList.add('show');
 else if (weakGPU) { try { if (!localStorage.getItem('colosseum-igpu-tip')) { localStorage.setItem('colosseum-igpu-tip', '1');
   flashToast('Running on built-in Intel graphics, so I lightened things up. If your PC has an NVIDIA or AMD card, see Tools → Performance.'); } } catch (e) {} }
 document.getElementById('gwClose').onclick = () => gpuWarn.classList.remove('show');
-let pfAcc = 0, pfN = 0, pfChecks = 0, autoDone = false;
+let pfAcc = 0, pfN = 0, pfChecks = 0, autoDone = false, slowRuns = 0;
 try { autoDone = sessionStorage.getItem('colosseum-autoperf') === '1'; } catch (e) {}
 tickers.push((dt) => {
   pfAcc += dt; pfN++;
@@ -2501,6 +2503,12 @@ tickers.push((dt) => {
       for (const k of ['ships', 'satellite', 'spaceport', 'asteroids']) showOpts[k] = false; applyShow();
       flashToast('Running slow, so I switched to a lighter mode. Change it in Menu → Scene.');
     } else if (looks.ao) { looks.ao = false; applyLooks(); }   // casual: keep the whole scene, only drop resolution + soft shadows
+  }
+  // casual: still crawling after the step-down (two checks in a row under 12 fps) -> switch to the tour video
+  if (CASUAL && (autoDone || isMobile) && pfChecks >= 4) {
+    slowRuns = fps < 12 ? slowRuns + 1 : 0;
+    let forced = false; try { forced = sessionStorage.getItem('colosseum-live') === '1'; } catch (e) {}
+    if (slowRuns >= 2 && !forced) location.replace('lite.html');
   }
 });
 function flashToast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 6000); }
