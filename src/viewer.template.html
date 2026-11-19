@@ -49,10 +49,13 @@
   .dlg h3{font-family:Cinzel,serif;color:#ffe2a0;margin:0 0 12px;letter-spacing:.1em}
   .dlg label{display:block;font-size:12px;color:#9fb6ff;letter-spacing:.12em;margin:10px 0 4px}
   .dlg input{width:100%;box-sizing:border-box;font:600 16px Inter,sans-serif;padding:9px 11px;border-radius:10px;border:1px solid rgba(159,182,255,.4);background:#0c0b24;color:#fff}
-  .tourOpt{display:block;width:100%;text-align:left;margin:0 0 8px;padding:11px 13px!important;border-radius:12px!important}
+  .tourOpt{display:flex!important;align-items:center;gap:12px;width:100%;text-align:left;margin:0 0 8px;padding:12px 14px!important;border-radius:14px!important}
+  .tourOpt:hover{border-color:#ffd27a!important;background:rgba(70,50,130,.8)!important}
+  .tourOpt em{font-style:normal;font-size:22px;width:30px;text-align:center;flex:none}
+  .tourOpt .tTxt{flex:1;min-width:0}
   .tourOpt b{display:block;font-family:Cinzel,serif;font-size:16px;color:#ffe2a0;letter-spacing:.06em}
-  .tourOpt span{display:block;font-weight:400;font-size:13px;color:#cfc8f2;margin-top:3px}
-  .tourOpt i{font-style:normal;color:#9fb6ff;font-size:12px}
+  .tourOpt .tTxt span{display:block;font-weight:400;font-size:14px;color:#cfc8f2;margin-top:2px}
+  .tourOpt i{font-style:normal;color:#9fb6ff;font-size:13px;flex:none;background:rgba(159,182,255,.12);border-radius:999px;padding:3px 9px}
   .dlg .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   #bigText{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;z-index:4;font-family:Cinzel,serif;font-weight:700;
     font-size:min(34vmin,260px);letter-spacing:.04em;opacity:0;background:linear-gradient(180deg,#fff3cf,#e2b04f 55%,#9a6a24);
@@ -146,6 +149,13 @@
   #gpuWarn > b{font-family:Cinzel,serif;color:#ffb0b0;font-size:16px}
   #gpuWarn ol{padding-left:20px}#gpuWarn code{color:#ffe2a0}
   #gpuWarn button{font:600 14px Inter,sans-serif;color:#fff6dd;background:rgba(60,40,110,.8);border:1px solid rgba(255,210,122,.7);padding:8px 14px;border-radius:999px;cursor:pointer}
+  /* casual (public) mode: tours + camera views only */
+  body.casual #aMatch,body.casual #aParty,body.casual #aMusic,body.casual #aSound{display:none!important}
+  body.full #aMute{display:none!important}
+  body.casual [data-tab=fighters],body.casual [data-tab=scene],body.casual [data-tab=tools],
+  body.casual [data-pane=fighters],body.casual [data-pane=scene],body.casual [data-pane=tools],
+  body.casual [data-pane=camera] h4,body.casual [data-pane=camera] .row{display:none!important}
+  body.casual .hud .v{display:none}
   #loading{position:fixed;inset:0;display:grid;place-items:center;font-family:Cinzel,serif;letter-spacing:.3em;color:#e2b04f;font-size:18px}
   @media (max-width:1150px){.hint{display:none}}
   @media (max-width:640px){.hud h1{font-size:20px}.panel{max-width:calc(100vw - 40px);bottom:70px}.panel button,.actions button{font-size:13px;padding:7px 10px}}
@@ -166,6 +176,7 @@
   <button id="aParty" title="Fireworks and confetti">✨<span>Celebrate</span></button>
   <button id="aMusic" title="Drum &amp; bass during match day">♫<span>Music</span></button>
   <button id="aSound" title="Ambience and effects">♪<span>Sound</span></button>
+  <button id="aMute" title="Mute / unmute">🔊<span>Sound</span></button>
   <button id="menuBtn" title="All settings">☰<span>Menu</span></button>
 </nav>
 <aside id="drawer" aria-label="Settings">
@@ -179,7 +190,7 @@
   </div>
   <div class="tabBody">
     <section data-pane="tours" id="tourDlg">
-      <p class="info">Cinematic camera flights. The buttons hide while a tour plays, so it's ready to screen-record. Match-day lights kick in partway through.</p>
+      <p class="info">Pick a flight. Tap <b>■ Stop tour</b> anytime to take back control.</p>
       <div id="tourList"></div>
     </section>
     <section data-pane="fighters" id="matchPanel">
@@ -313,6 +324,11 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 /*__COLOSSEUM__*/
 
 const isMobile = matchMedia('(pointer: coarse)').matches || innerWidth < 760;
+// Casual (public) mode at "/", full builder mode at "/tyler" (or #tyler for local copies)
+const FULL = /\/tyler\/?$/i.test(location.pathname) || /(^|[#-])tyler(-|$)/i.test(location.hash);
+const CASUAL = !FULL;
+document.body.classList.add(CASUAL ? 'casual' : 'full');
+const SFX_VOL = CASUAL ? 0.85 / 3 : 0.85, MUSIC_VOL = CASUAL ? 0.55 / 2 : 0.55;
 // integrated graphics (Intel HD/UHD/Iris, AMD APUs) get a lighter setup by default
 const weakGPU = (() => { if (isMobile) return false; try {
   const c = document.createElement('canvas').getContext('webgl2'), e = c && c.getExtension('WEBGL_debug_renderer_info');
@@ -1046,7 +1062,7 @@ const orbitKeys = (() => {
   return k;
 })();
 const TOURS = [
-  { name: 'Grand Arrival', desc: 'From deep space, under the floating island, over the wall and onto the arena floor.',
+  { name: 'Grand Arrival', icon: '🌌', desc: 'Fly in from deep space and land in the arena.',
     keys: [
   [[0, 300, 620], [0, 0, 0]],
   [[260, 120, 380], [0, -20, 0]],
@@ -1066,7 +1082,7 @@ const TOURS = [
   [[0, 120, 175], [0, 4, 0]],
 ],
     dur: [4.2, 1.9, 1.7, 1.7, 1.9, 3.2, 3.4, 3.0, 3.0, 2.8, 2.8, 3.4, 3.4, 3.8, 4.4], match: 7 },
-  { name: "Gladiator's Walk", desc: 'Walk out of the gate passage at eye level, into the lights and the roar of the crowd.',
+  { name: "Gladiator's Walk", icon: '⚔️', desc: 'Step out of the gate into the roar of the crowd.',
     keys: [
       [[0, 6.5, 97], [0, 7, 60]],
       [[0, 5.5, 88], [0, 6.5, 40]],
@@ -1082,10 +1098,10 @@ const TOURS = [
       [[0, 46, 58], [0, 1.6, -4]],
     ],
     dur: [3.0, 3.0, 3.0, 3.2, 3.6, 3.6, 3.6, 3.6, 3.6, 3.8, 4.4], match: 1.6 },
-  { name: 'Skyline Orbit', desc: 'A slow, rising orbit around the outside: towers, statues and screens, ending top-down.',
+  { name: 'Skyline Orbit', icon: '🏛️', desc: 'A slow, rising circle around the whole stadium.',
     keys: [...orbitKeys, [[30, 210, 60], [0, 0, 0]], [[0, 290, 6], [0, 0, 0]], [[0, 120, 175], [0, 4, 0]]],
     dur: [4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 5.0], match: 9 },
-  { name: 'Victory Lap', desc: 'Fast and low: swoop in over the gate, race a lap around the arena floor, then rise past the hologram and screens.',
+  { name: 'Victory Lap', icon: '🏆', desc: 'A fast, low lap around the arena floor.',
     keys: [
       [[0, 150, 230], [0, 10, 0]],
       [[0, 62, 122], [0, 8, 0]],
@@ -1119,6 +1135,7 @@ function tourParam(f) {
 }
 function startTour(i = 0) {
   useTour(i);
+  if (CASUAL) setTimeout(() => fx.celebrate(10), 300);
   touring = true; tourT = 0; tween = null;
   uiWasClean = document.body.classList.contains('clean');
   rotWas = controls.autoRotate; controls.autoRotate = false; controls.enabled = false;
@@ -1178,7 +1195,7 @@ const sfx = (() => {
   function toggle() {
     if (!ac) init();
     on = !on; ac.resume && ac.resume();
-    master.gain.setTargetAtTime(on ? 0.85 : 0, ac.currentTime, 0.4);
+    master.gain.setTargetAtTime(on ? SFX_VOL : 0, ac.currentTime, 0.4);
     return on;
   }
   function whoosh(len = 1.1) {
@@ -1316,7 +1333,7 @@ const music = (() => {
   function start() {
     playing = true;
     if (!timer) { step = 0; nextT = A.currentTime + 0.06; timer = setInterval(tick, 25); }
-    out.gain.cancelScheduledValues(A.currentTime); out.gain.setTargetAtTime(0.55, A.currentTime, 0.6);
+    out.gain.cancelScheduledValues(A.currentTime); out.gain.setTargetAtTime(MUSIC_VOL, A.currentTime, 0.6);
   }
   function stop() {
     playing = false; stopAt = A.currentTime + 2.2;
@@ -1378,6 +1395,8 @@ controls.addEventListener('start', () => { tween = null; });
 const drawer = document.getElementById('drawer'), menuBtn = document.getElementById('menuBtn');
 let curTab = 'tours';
 try { curTab = localStorage.getItem('colosseum-tab') || 'tours'; } catch (e) {}
+if (CASUAL && !['tours', 'camera'].includes(curTab)) curTab = 'tours';
+if (CASUAL) document.querySelector('.dHead b').textContent = 'EXPLORE';
 function showTab(name) {
   curTab = name;
   drawer.querySelectorAll('[data-tab]').forEach(b => { const on = b.dataset.tab === name; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
@@ -1406,14 +1425,34 @@ const aMusic = document.getElementById('aMusic');
 aMusic.onclick = () => { const on = music.toggle(); aMusic.title = on ? 'Music on' : 'Music off'; aMusic.classList.toggle('on', on); };
 const aSound = document.getElementById('aSound');
 aSound.onclick = () => { const on = sfx.toggle(); aSound.title = on ? 'Sound on' : 'Sound off'; aSound.classList.toggle('on', on); };
+// casual: sound + music on by default (browsers only allow audio after the first tap/click/key)
+const aMute = document.getElementById('aMute');
+let casualAudio = false, muted = false;
+function startCasualAudio() {
+  if (!CASUAL || casualAudio || muted) return;
+  casualAudio = true;
+  try { sfx.toggle(); music.toggle(); } catch (e) {}
+}
+if (CASUAL) for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, startCasualAudio, { once: false, passive: true });
+aMute.onclick = (e) => {
+  e.stopPropagation();
+  if (!casualAudio) { muted = !muted; }
+  else { muted = !muted; try { sfx.toggle(); music.toggle(); } catch (err) {} }
+  aMute.firstChild.textContent = muted ? '🔇' : '🔊';
+  aMute.classList.toggle('on', !muted);
+};
 const tourDlg = document.getElementById('tourDlg'), tourList = document.getElementById('tourList');
-TOURS.forEach((tr, i) => {
-  const b = document.createElement('button'); b.className = 'tourOpt';
-  const secs = Math.round(tr.dur.reduce((a, c) => a + c, 0));
-  b.innerHTML = `<b>${tr.name} <i>· ${secs}s</i></b><span>${tr.desc}</span>`;
-  b.onclick = () => { closeDrawer(); startTour(i); };
-  tourList.appendChild(b);
-});
+function renderTours() {
+  tourList.innerHTML = '';
+  TOURS.forEach((tr, i) => {
+    const b = document.createElement('button'); b.className = 'tourOpt';
+    const secs = Math.round(tr.dur.reduce((a, c) => a + c, 0));
+    b.innerHTML = `<em>${tr.icon || '▶'}</em><span class="tTxt"><b>${tr.name}</b><span>${tr.desc}</span></span><i>${secs}s</i>`;
+    b.onclick = () => { closeDrawer(); startTour(i); };
+    tourList.appendChild(b);
+  });
+}
+renderTours();
 document.getElementById('aTour').onclick = () => (drawer.classList.contains('open') && curTab === 'tours') ? closeDrawer() : openDrawer('tours');
 document.getElementById('stopTour').onclick = stopTour;
 window.__match = v => { setMatch(v); aMatch.classList.toggle('on', matchOn); };
@@ -2151,7 +2190,7 @@ Object.assign(views, {
   spaceport: [PORT.center.clone().addScaledVector(lat, 260).addScaledVector(ax, -120).setY(70).toArray(), PORT.center.clone().setY(PORT.deckY).toArray()],
 });
 TOURS.push({
-  name: 'Shuttle Ride', desc: 'Start on the spaceport pad, ride a shuttle across to the colosseum and fly straight into the arena.',
+  name: 'Shuttle Ride', icon: '🚀', desc: 'Ride a shuttle from the spaceport into the arena.',
   keys: [
     [padP.clone().addScaledVector(lat, -40).add(new THREE.Vector3(0, 14, 0)).toArray(), padP.toArray()],
     [padP.clone().addScaledVector(lat, -10).add(new THREE.Vector3(0, 30, 0)).toArray(), padP.clone().addScaledVector(ax, -150).toArray()],
@@ -2166,12 +2205,7 @@ TOURS.push({
   ],
   dur: [3.2, 3.4, 3.8, 3.8, 3.4, 3.2, 3.2, 3.6, 4.4], match: 6,
 });
-{
-  const tr = TOURS[TOURS.length - 1], b = document.createElement('button'); b.className = 'tourOpt';
-  b.innerHTML = `<b>${tr.name} <i>· ${Math.round(tr.dur.reduce((a, c) => a + c, 0))}s</i></b><span>${tr.desc}</span>`;
-  b.onclick = () => { closeDrawer(); startTour(TOURS.length - 1); };
-  document.getElementById('tourList').appendChild(b);
-}
+renderTours();
 
 // ================= v1.0.20: AMBIENT SPACE TRAFFIC (instanced, cheap) =================
 const traffic = (() => {

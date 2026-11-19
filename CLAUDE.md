@@ -4,12 +4,16 @@
 royale-style matches and as a public site. Live via Netlify from `main` of `relyt-coding/intergalactic-colosseum`.
 
 ## Shipping ("ship it" / "export")
-1. Bump `MODEL_VERSION` in `src/colosseum.js` by exactly ONE patch (v1.0.41 → v1.0.42). Never bump during normal edits.
+1. Bump `MODEL_VERSION` in `src/colosseum.js` by exactly ONE patch (e.g. v1.0.42 → v1.0.43). Never bump during normal edits.
 2. `npm run build` → regenerates root `index.html` (version shows top-left as "MODEL vX").
 3. `python3 tools/test/console_check.py` must show no `pageerror`.
 4. If the model geometry changed: `npm run export` then `node src/compress.mjs dist/<file>.glb dist/<file>-compressed.glb`.
 5. Add a CHANGELOG.md entry, commit, push to `main` (Netlify deploys automatically).
 6. Send the user a zip/viewer html as backup, with the version in the file name AND the message.
+
+## Modes
+- `/` = CASUAL (public): Tours + Camera tabs only, mute button, audio on by default (after first gesture), tours start with fireworks.
+- `/tyler` (Netlify rewrite in netlify.toml) or `#tyler` = FULL builder mode with every feature. Flags: `CASUAL` / `FULL`, body class `casual`/`full`.
 
 ## File map
 - `index.html` — GENERATED, the deployed site. Never hand-edit; edit `src/` and rebuild.

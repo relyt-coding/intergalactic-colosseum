@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.42 — 2026-11-18
+- Casual public mode at `/`: only Tours + Camera (menu "EXPLORE"), a mute button, no Match day / Celebrate / builder tabs.
+- Full builder mode moved to `/tyler` (Netlify rewrite; `#tyler` works for local copies).
+- Casual: sound + music on by default (start on first tap/click), music at 1/2 and effects at 1/3 volume.
+- Casual: every tour opens with fireworks and confetti.
+- Cleaner tour list: icons, short one-line descriptions, duration pills.
+
 ## v1.0.41 — 2026-11-18
 - First GitHub/Netlify release: site packaged with `netlify.toml`, link-preview image and meta tags.
 - Source, build scripts, logo tracing tools and test harness added to the repo.
