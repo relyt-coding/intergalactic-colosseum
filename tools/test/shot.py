@@ -3,7 +3,7 @@ from playwright.async_api import async_playwright
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--autoplay-policy=no-user-gesture-required','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
-        pg = await b.new_page(viewport={'width':960,'height':540})
+        pg = await b.new_page(viewport={'width':int(__import__('os').environ.get('VW',960)),'height':int(__import__('os').environ.get('VH',540))})
         pg.on('pageerror', lambda e: print('ERR', e))
         pg.on('console', lambda m: m.type in ('error','warning') and 'Failed to load' not in m.text and print('CONSOLE', m.text[:300]))
         async def route(r):

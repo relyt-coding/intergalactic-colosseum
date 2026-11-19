@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.44
+- Casual (`/`): new frosted-glass "Versus × Maximus Games" panel on the left with the season schedule and a Sign up button per event (all link to versusroyale.com for now; edit `EVENTS` in the viewer template).
+- Tours, Scenes and Sound buttons live at the bottom of the panel; Tours/Scenes open their lists inside it.
+- Next event is highlighted; past events dim and lose their button automatically.
+- Removed the "Intergalactic Colosseum" title (all modes). Phone: panel sits at the bottom, capped at half the screen.
+
 ## v1.0.43 — 2026-11-18
 - Casual always shows the satellite, spaceport, asteroids, ships and crowd: it ignores saved show/hide choices,
   and the slow-device fallback there only lowers resolution and soft shadows instead of hiding scenery.
