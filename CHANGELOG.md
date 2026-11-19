@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.0.45
+- Phone (casual): the panel is now just a bottom bar — Tours · Scenes · Schedule · Sound. Tapping one slides the panel up with that list; tapping it again (or picking a tour/scene) tucks it back down. Desktop unchanged.
+
 ## v1.0.44
 - Casual (`/`): new frosted-glass "Versus × Maximus Games" panel on the left with the season schedule and a Sign up button per event (all link to versusroyale.com for now; edit `EVENTS` in the viewer template).
 - Tours, Scenes and Sound buttons live at the bottom of the panel; Tours/Scenes open their lists inside it.

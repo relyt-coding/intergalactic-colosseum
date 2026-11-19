@@ -201,9 +201,15 @@
   .evDock button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font:600 14px Inter,sans-serif;color:#efe8ff;
     background:rgba(14,12,38,.4);border:1px solid rgba(226,176,79,.35);padding:10px 8px;border-radius:12px;cursor:pointer}
   .evDock button:hover{border-color:#ffd27a}
+  #eSched{display:none}
   .evDock button.on{background:rgba(226,176,79,.28);border-color:rgba(255,226,160,.8);color:#fff6dd}
   @media (max-width:640px){
-    body.casual #events{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:50vh}
+    body.casual #events{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:60vh}
+    #events:not(.open) .evHead,#events:not(.open) .evBody{display:none}
+    #events:not(.open) .evDock{border-top:none}
+    #eSched{display:flex}
+    .evDock{gap:4px;padding:6px}
+    .evDock button{flex-direction:column;gap:2px;font-size:12px;padding:7px 2px}
     .evHead{padding:10px 14px 8px}.evHead h2{font-size:18px}.evHead p{display:none}
     .evBody{padding:8px 10px}.ev{padding:8px;gap:10px;margin-bottom:6px}.ev .d{width:44px}.ev .d b{font-size:20px}
     body.casual #toast{top:10px}
@@ -229,6 +235,7 @@
   <div class="evDock">
     <button id="eTour">▶ Tours</button>
     <button id="eScenes">◉ Scenes</button>
+    <button id="eSched">📅 Schedule</button>
     <button id="eSound">🔊 Sound</button>
   </div>
 </aside>
@@ -1549,20 +1556,34 @@ if (CASUAL) {
   evEl.querySelector('[data-ev=camera]').appendChild(camGrid);
   const eTour = document.getElementById('eTour'), eScenes = document.getElementById('eScenes'), eSound = document.getElementById('eSound');
   let evPane = 'list';
+  const phone = () => matchMedia('(max-width:640px)').matches;
+  const eSched = document.getElementById('eSched');
+  const setOpen = v => evEl.classList.toggle('open', v);
+  const pick = name => {   // phone: tapping the active tab collapses the bar
+    if (phone()) { if (evEl.classList.contains('open') && evPane === name) { setOpen(false); syncBtns(); return; } setOpen(true); showEv(name); }
+    else showEv(evPane === name && name !== 'list' ? 'list' : name);
+  };
+  const syncBtns = () => {
+    const open = !phone() || evEl.classList.contains('open');
+    eTour.classList.toggle('on', open && evPane === 'tours'); eScenes.classList.toggle('on', open && evPane === 'camera');
+    eSched.classList.toggle('on', open && evPane === 'list');
+  };
   const showEv = name => {
     evPane = name;
     evEl.querySelectorAll('[data-ev]').forEach(s => s.classList.toggle('on', s.dataset.ev === name));
-    eTour.classList.toggle('on', name === 'tours'); eScenes.classList.toggle('on', name === 'camera');
+    syncBtns();
     evEl.querySelector('.evBody').scrollTop = 0;
   };
-  eTour.onclick = () => showEv(evPane === 'tours' ? 'list' : 'tours');
-  eScenes.onclick = () => showEv(evPane === 'camera' ? 'list' : 'camera');
+  eTour.onclick = () => pick('tours');
+  eScenes.onclick = () => pick('camera');
+  eSched.onclick = () => pick('list');
   evEl.querySelectorAll('[data-back]').forEach(b => b.onclick = () => showEv('list'));
-  tourList.addEventListener('click', () => showEv('list'));
-  if (isMobile) camGrid.addEventListener('click', e => { if (e.target.closest('[data-view]')) showEv('list'); });
+  tourList.addEventListener('click', () => { showEv('list'); if (phone()) { setOpen(false); syncBtns(); } });
+  camGrid.addEventListener('click', e => { if (e.target.closest('[data-view]') && phone()) { setOpen(false); syncBtns(); } });
+  addEventListener('resize', syncBtns);
   const syncSound = () => { eSound.textContent = muted ? '🔇 Sound' : '🔊 Sound'; eSound.classList.toggle('on', !muted); };
   eSound.onclick = e => { aMute.onclick(e); syncSound(); };
-  syncSound();
+  syncSound(); syncBtns();
 }
 window.__match = v => { setMatch(v); aMatch.classList.toggle('on', matchOn); };
 window.__tour = (i, f) => { startTour(i); tourT = f; };
