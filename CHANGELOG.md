@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.43 — 2026-11-18
+- Casual always shows the satellite, spaceport, asteroids, ships and crowd: it ignores saved show/hide choices,
+  and the slow-device fallback there only lowers resolution and soft shadows instead of hiding scenery.
+
 ## v1.0.42 — 2026-11-18
 - Casual public mode at `/`: only Tours + Camera (menu "EXPLORE"), a mute button, no Match day / Celebrate / builder tabs.
 - Full builder mode moved to `/tyler` (Netlify rewrite; `#tyler` works for local copies).

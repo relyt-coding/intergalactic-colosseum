@@ -2157,7 +2157,8 @@ const shuttleCurve = new THREE.CatmullRomCurve3([
   polar(300, 80, colAng - 0.3), padP.clone().addScaledVector(lat, 40).add(new THREE.Vector3(0, 40, 0)),
 ], true, 'centripetal');
 const showOpts = { ships: true, satellite: true, spaceport: true, asteroids: true, crowd: true };
-try { Object.assign(showOpts, JSON.parse(localStorage.getItem('colosseum-show') || '{}')); } catch (e) {}
+// casual always shows the full scene; saved show/hide choices only apply in /tyler
+if (FULL) try { Object.assign(showOpts, JSON.parse(localStorage.getItem('colosseum-show') || '{}')); } catch (e) {}
 const ships = [];
 (isMobile ? [0, 0.5] : [0, 0.25, 0.5, 0.75]).forEach((u, k) => ships.push({ ...makeShip([0x35d8ff, 0xffc040, 0xff3fb4, 0x3dff9a][k], 1.0), curve: linerCurve, u, kind: 'liner' }));
 (isMobile ? [0] : [0, 0.33, 0.66]).forEach((u, k) => ships.push({ ...makeShip([0x9b6bff, 0x3dff9a, 0xff7a2f][k], 0.6), curve: shuttleCurve, u, kind: 'shuttle' }));
@@ -2327,7 +2328,7 @@ function applyShow() {
   document.getElementById('tCrowd').classList.toggle('on', showOpts.crowd);
   const lite = !showOpts.ships && !showOpts.satellite && !showOpts.spaceport && !showOpts.asteroids && !showOpts.crowd;
   document.getElementById('tLite').classList.toggle('on', lite);
-  try { localStorage.setItem('colosseum-show', JSON.stringify(showOpts)); } catch (e) {}
+  if (FULL) try { localStorage.setItem('colosseum-show', JSON.stringify(showOpts)); } catch (e) {}
   renderer.shadowMap.needsUpdate = true;
 }
 document.querySelectorAll('[data-show]').forEach(b => b.onclick = () => { showOpts[b.dataset.show] = !showOpts[b.dataset.show]; applyShow(); });
@@ -2359,8 +2360,10 @@ tickers.push((dt) => {
   if (!isMobile && !autoDone && pfChecks >= 2 && fps < 24) {
     autoDone = true; try { sessionStorage.setItem('colosseum-autoperf', '1'); } catch (e) {}
     dpr = Math.max(0.6, dpr * 0.7); renderer.setPixelRatio(dpr); composer.setPixelRatio(dpr); composer.setSize(innerWidth, innerHeight);
-    for (const k of ['ships', 'satellite', 'spaceport', 'asteroids']) showOpts[k] = false; applyShow();
-    flashToast('Running slow, so I switched to a lighter mode. Change it in Menu → Scene.');
+    if (FULL) {
+      for (const k of ['ships', 'satellite', 'spaceport', 'asteroids']) showOpts[k] = false; applyShow();
+      flashToast('Running slow, so I switched to a lighter mode. Change it in Menu → Scene.');
+    } else if (looks.ao) { looks.ao = false; applyLooks(); }   // casual: keep the whole scene, only drop resolution + soft shadows
   }
 });
 function flashToast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 6000); }
