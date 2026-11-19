@@ -1,0 +1,12 @@
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { buildColosseum, MODEL_VERSION } from './colosseum.js';
+import fs from 'fs';
+const LOGOS = JSON.parse(fs.readFileSync(new URL('./logos.json', import.meta.url)));
+globalThis.FileReader = class { readAsArrayBuffer(b){ b.arrayBuffer().then(r=>{this.result=r; this.onload?.({target:this}); this.onloadend?.({target:this});}); } readAsDataURL(b){ b.arrayBuffer().then(r=>{this.result='data:application/octet-stream;base64,'+Buffer.from(r).toString('base64'); this.onload?.({target:this}); this.onloadend?.({target:this});}); } };
+const { root } = buildColosseum(THREE, mergeGeometries, LOGOS);
+let tris=0; root.traverse(o=>{ if(o.isMesh) tris += o.geometry.index.count/3; });
+console.log('meshes', root.children.map(g=>g.name+':'+g.children.length).join(' '), 'tris', tris);
+const scene = new THREE.Scene(); scene.add(root);
+new GLTFExporter().parse(scene, buf => { const f=new URL(`../dist/intergalactic-colosseum-${MODEL_VERSION}.glb`, import.meta.url); fs.writeFileSync(f, Buffer.from(buf)); console.log(f, (buf.byteLength/1e6).toFixed(1)+'MB'); }, e=>console.error(e), { binary:true });

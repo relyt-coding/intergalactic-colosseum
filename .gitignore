@@ -1,0 +1,5 @@
+node_modules/
+dist/
+*.glb
+shot_*.png
+mshot_*.png

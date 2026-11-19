@@ -1,0 +1,17 @@
+{
+  "name": "intergalactic-colosseum",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node src/build.mjs",
+    "export": "mkdir -p dist && node src/export.mjs",
+    "compress": "node src/compress.mjs"
+  },
+  "dependencies": {
+    "three": "0.170.0",
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "draco3dgltf": "^1.5.9"
+  }
+}
