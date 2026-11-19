@@ -202,6 +202,9 @@
     background:rgba(14,12,38,.4);border:1px solid rgba(226,176,79,.35);padding:10px 8px;border-radius:12px;cursor:pointer}
   .evDock button:hover{border-color:#ffd27a}
   #eSched{display:none}
+  .ico{width:20px;height:20px;flex:none;filter:drop-shadow(0 0 3px rgba(226,176,79,.35))}
+  .tourOpt em .ico{width:34px;height:34px;display:block;margin:auto}
+
   .evDock button.on{background:rgba(226,176,79,.28);border-color:rgba(255,226,160,.8);color:#fff6dd}
   @media (max-width:640px){
     body.casual #events{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:60vh}
@@ -209,7 +212,8 @@
     #events:not(.open) .evDock{border-top:none}
     #eSched{display:flex}
     .evDock{gap:4px;padding:6px}
-    .evDock button{flex-direction:column;gap:2px;font-size:12px;padding:7px 2px}
+    .evDock button{flex-direction:column;gap:3px;font-size:12px;padding:7px 2px}
+    .evDock .ico{width:22px;height:22px}
     .evHead{padding:10px 14px 8px}.evHead h2{font-size:18px}.evHead p{display:none}
     .evBody{padding:8px 10px}.ev{padding:8px;gap:10px;margin-bottom:6px}.ev .d{width:44px}.ev .d b{font-size:20px}
     body.casual #toast{top:10px}
@@ -225,6 +229,7 @@
 <body>
 <div id="loading">SUMMONING THE ARENA…</div>
 <div class="hud"><h1>INTERGALACTIC COLOSSEUM</h1><div class="v">MODEL __VERSION__</div></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="goldG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3cf"/><stop offset=".5" stop-color="#e2b04f"/><stop offset="1" stop-color="#9a6a24"/></linearGradient></defs></svg>
 <aside id="events" aria-label="Versus x Maximus Games">
   <div class="evHead"><h2>Versus<span class="x">×</span>Maximus Games</h2><p>Season schedule</p></div>
   <div class="evBody">
@@ -233,10 +238,10 @@
     <section data-ev="camera"><button class="evBack" data-back>← Events</button></section>
   </div>
   <div class="evDock">
-    <button id="eTour">▶ Tours</button>
-    <button id="eScenes">◉ Scenes</button>
-    <button id="eSched">📅 Schedule</button>
-    <button id="eSound">🔊 Sound</button>
+    <button id="eTour" data-ico="play">Tours</button>
+    <button id="eScenes" data-ico="camera">Scenes</button>
+    <button id="eSched" data-ico="calendar">Schedule</button>
+    <button id="eSound">Sound</button>
   </div>
 </aside>
 <nav class="dock" aria-label="Quick controls">
@@ -1131,7 +1136,7 @@ const orbitKeys = (() => {
   return k;
 })();
 const TOURS = [
-  { name: 'Grand Arrival', icon: '🌌', desc: 'Fly in from deep space and land in the arena.',
+  { name: 'Grand Arrival', icon: 'galaxy', desc: 'Fly in from deep space and land in the arena.',
     keys: [
   [[0, 300, 620], [0, 0, 0]],
   [[260, 120, 380], [0, -20, 0]],
@@ -1151,7 +1156,7 @@ const TOURS = [
   [[0, 120, 175], [0, 4, 0]],
 ],
     dur: [4.2, 1.9, 1.7, 1.7, 1.9, 3.2, 3.4, 3.0, 3.0, 2.8, 2.8, 3.4, 3.4, 3.8, 4.4], match: 7 },
-  { name: "Gladiator's Walk", icon: '⚔️', desc: 'Step out of the gate into the roar of the crowd.',
+  { name: "Gladiator's Walk", icon: 'swords', desc: 'Step out of the gate into the roar of the crowd.',
     keys: [
       [[0, 6.5, 97], [0, 7, 60]],
       [[0, 5.5, 88], [0, 6.5, 40]],
@@ -1167,10 +1172,10 @@ const TOURS = [
       [[0, 46, 58], [0, 1.6, -4]],
     ],
     dur: [3.0, 3.0, 3.0, 3.2, 3.6, 3.6, 3.6, 3.6, 3.6, 3.8, 4.4], match: 1.6 },
-  { name: 'Skyline Orbit', icon: '🏛️', desc: 'A slow, rising circle around the whole stadium.',
+  { name: 'Skyline Orbit', icon: 'temple', desc: 'A slow, rising circle around the whole stadium.',
     keys: [...orbitKeys, [[30, 210, 60], [0, 0, 0]], [[0, 290, 6], [0, 0, 0]], [[0, 120, 175], [0, 4, 0]]],
     dur: [4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 5.0], match: 9 },
-  { name: 'Victory Lap', icon: '🏆', desc: 'A fast, low lap around the arena floor.',
+  { name: 'Victory Lap', icon: 'laurel', desc: 'A fast, low lap around the arena floor.',
     keys: [
       [[0, 150, 230], [0, 10, 0]],
       [[0, 62, 122], [0, 8, 0]],
@@ -1510,13 +1515,14 @@ aMute.onclick = (e) => {
   aMute.firstChild.textContent = muted ? '🔇' : '🔊';
   aMute.classList.toggle('on', !muted);
 };
+function icon(n) { return ICONS[n] ? `<svg class="ico" viewBox="0 0 240 240" aria-hidden="true"><path fill="url(#goldG)" fill-rule="evenodd" d="${ICONS[n]}"/></svg>` : ''; }
 const tourDlg = document.getElementById('tourDlg'), tourList = document.getElementById('tourList');
 function renderTours() {
   tourList.innerHTML = '';
   TOURS.forEach((tr, i) => {
     const b = document.createElement('button'); b.className = 'tourOpt';
     const secs = Math.round(tr.dur.reduce((a, c) => a + c, 0));
-    b.innerHTML = `<em>${tr.icon || '▶'}</em><span class="tTxt"><b>${tr.name}</b><span>${tr.desc}</span></span><i>${secs}s</i>`;
+    b.innerHTML = `<em>${icon(tr.icon || 'play')}</em><span class="tTxt"><b>${tr.name}</b><span>${tr.desc}</span></span><i>${secs}s</i>`;
     b.onclick = () => { closeDrawer(); startTour(i); };
     tourList.appendChild(b);
   });
@@ -1581,7 +1587,8 @@ if (CASUAL) {
   tourList.addEventListener('click', () => { showEv('list'); if (phone()) { setOpen(false); syncBtns(); } });
   camGrid.addEventListener('click', e => { if (e.target.closest('[data-view]') && phone()) { setOpen(false); syncBtns(); } });
   addEventListener('resize', syncBtns);
-  const syncSound = () => { eSound.textContent = muted ? '🔇 Sound' : '🔊 Sound'; eSound.classList.toggle('on', !muted); };
+  evEl.querySelectorAll('[data-ico]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.ico)));
+  const syncSound = () => { eSound.innerHTML = icon(muted ? 'mute' : 'sound') + 'Sound'; eSound.classList.toggle('on', !muted); };
   eSound.onclick = e => { aMute.onclick(e); syncSound(); };
   syncSound(); syncBtns();
 }
@@ -2321,7 +2328,7 @@ Object.assign(views, {
   spaceport: [PORT.center.clone().addScaledVector(lat, 260).addScaledVector(ax, -120).setY(70).toArray(), PORT.center.clone().setY(PORT.deckY).toArray()],
 });
 TOURS.push({
-  name: 'Shuttle Ride', icon: '🚀', desc: 'Ride a shuttle from the spaceport into the arena.',
+  name: 'Shuttle Ride', icon: 'shuttle', desc: 'Ride a shuttle from the spaceport into the arena.',
   keys: [
     [padP.clone().addScaledVector(lat, -40).add(new THREE.Vector3(0, 14, 0)).toArray(), padP.toArray()],
     [padP.clone().addScaledVector(lat, -10).add(new THREE.Vector3(0, 30, 0)).toArray(), padP.clone().addScaledVector(ax, -150).toArray()],

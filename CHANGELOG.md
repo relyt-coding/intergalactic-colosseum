@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.0.46
+- Replaced the emojis in the casual panel and tour list with a custom gold icon set (generated in Higgsfield, traced to vector paths in `src/icons.json`, gold gradient `#goldG`): galaxy, crossed swords, temple, laurel, shuttle, play, film camera, calendar, sound, muted.
+
 ## v1.0.45
 - Phone (casual): the panel is now just a bottom bar — Tours · Scenes · Schedule · Sound. Tapping one slides the panel up with that list; tapping it again (or picking a tour/scene) tucks it back down. Desktop unchanged.
 
