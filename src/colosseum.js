@@ -1,5 +1,5 @@
 // Intergalactic Colosseum — procedural geometry (shared by the web viewer and the GLB exporter)
-export const MODEL_VERSION = 'v1.0.47';
+export const MODEL_VERSION = 'v1.0.48';
 
 export function buildColosseum(THREE, mergeGeometries, logos = {}, opts = {}) {
   const PI = Math.PI, TAU = PI * 2, DEG = PI / 180;

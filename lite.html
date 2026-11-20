@@ -59,6 +59,12 @@
     background:rgba(14,12,38,.4);border:1px solid rgba(226,176,79,.35);padding:10px 8px;border-radius:12px;cursor:pointer}
   .evDock button:hover{border-color:#ffd27a}
   #eSched{display:none}
+  #preVid{position:fixed;inset:0;z-index:3;background:#05061a;transition:opacity 1.2s ease}
+  #preVid video{width:100%;height:100%;object-fit:cover;display:block}
+  #preVid p{position:absolute;right:22px;bottom:18px;margin:0;font:600 14px Inter,sans-serif;letter-spacing:.08em;color:#ffe2a0;
+    background:rgba(10,8,30,.45);border:1px solid rgba(226,176,79,.4);padding:8px 14px;border-radius:999px;backdrop-filter:blur(6px)}
+  #preVid.gone{opacity:0;pointer-events:none}
+  @media (max-width:640px){#preVid p{top:14px;bottom:auto;right:50%;transform:translateX(50%);white-space:nowrap}}
   .ico{width:20px;height:20px;flex:none;filter:drop-shadow(0 0 3px rgba(226,176,79,.35))}
   .tourOpt em .ico{width:34px;height:34px;display:block;margin:auto}
 

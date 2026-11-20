@@ -224,6 +224,12 @@
     background:rgba(14,12,38,.4);border:1px solid rgba(226,176,79,.35);padding:10px 8px;border-radius:12px;cursor:pointer}
   .evDock button:hover{border-color:#ffd27a}
   #eSched{display:none}
+  #preVid{position:fixed;inset:0;z-index:3;background:#05061a;transition:opacity 1.2s ease}
+  #preVid video{width:100%;height:100%;object-fit:cover;display:block}
+  #preVid p{position:absolute;right:22px;bottom:18px;margin:0;font:600 14px Inter,sans-serif;letter-spacing:.08em;color:#ffe2a0;
+    background:rgba(10,8,30,.45);border:1px solid rgba(226,176,79,.4);padding:8px 14px;border-radius:999px;backdrop-filter:blur(6px)}
+  #preVid.gone{opacity:0;pointer-events:none}
+  @media (max-width:640px){#preVid p{top:14px;bottom:auto;right:50%;transform:translateX(50%);white-space:nowrap}}
   .ico{width:20px;height:20px;flex:none;filter:drop-shadow(0 0 3px rgba(226,176,79,.35))}
   .tourOpt em .ico{width:34px;height:34px;display:block;margin:auto}
 
@@ -250,6 +256,12 @@
 </head>
 <body>
 <div id="loading">SUMMONING THE ARENA…</div>
+<div id="preVid"><video autoplay muted loop playsinline preload="auto" poster="lite-poster.jpg"><source src="lite-tour.mp4" type="video/mp4"></video><p>Loading the live arena…</p></div>
+<script>
+// v1.0.48: casual visitors watch the tour video while the live 3D loads (removed for /tyler and OBS links)
+if (/tyler/i.test(location.pathname + location.hash) || /obs/i.test(location.hash)) document.getElementById('preVid').remove();
+else document.getElementById('loading').style.display = 'none';
+</script>
 <div class="hud"><h1>INTERGALACTIC COLOSSEUM</h1><div class="v">MODEL __VERSION__</div></div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="goldG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3cf"/><stop offset=".5" stop-color="#e2b04f"/><stop offset="1" stop-color="#9a6a24"/></linearGradient></defs></svg>
 <aside id="events" aria-label="Versus x Maximus Games">
@@ -264,6 +276,7 @@
     <button id="eScenes" data-ico="camera">Scenes</button>
     <button id="eSched" data-ico="calendar">Schedule</button>
     <button id="eSound">Sound</button>
+    <button id="eLite" data-ico="shuttle" title="Smooth video version">Lite</button>
   </div>
 </aside>
 <nav class="dock" aria-label="Quick controls">
@@ -1592,6 +1605,7 @@ if (CASUAL) {
   evEl.querySelectorAll('[data-ico]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.ico)));
   const syncSound = () => { eSound.innerHTML = icon(muted ? 'mute' : 'sound') + 'Sound'; eSound.classList.toggle('on', !muted); };
   eSound.onclick = e => { aMute.onclick(e); syncSound(); };
+  document.getElementById('eLite').onclick = () => { try { sessionStorage.removeItem('colosseum-live'); } catch (e) {} location.href = 'lite.html'; };
   syncSound(); syncBtns();
 }
 window.__match = v => { setMatch(v); aMatch.classList.toggle('on', matchOn); };
@@ -2821,6 +2835,11 @@ renderer.setAnimationLoop(() => {
   composer.render();
 });
 document.getElementById('loading').remove();
+{ const pv = document.getElementById('preVid');
+  if (pv) { let n = 0; const t0 = performance.now();
+    const fade = () => { pv.classList.add('gone'); setTimeout(() => { const v = pv.querySelector('video'); v.pause(); v.removeAttribute('src'); v.querySelectorAll('source').forEach(x => x.remove()); v.load(); pv.remove(); }, 1300); };
+    tickers.push(function pvTick() { if (++n >= 45 && performance.now() - t0 > 1500) { tickers.splice(tickers.indexOf(pvTick), 1); fade(); } });
+  } }
 </script>
 </body>
 </html>

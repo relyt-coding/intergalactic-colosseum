@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.48
+- Casual: the tour video (`lite-tour.mp4`, poster first) plays behind the glass panel while the live 3D loads, with a "Loading the live arena…" pill. It fades out once the 3D has drawn 45 frames (and at least 1.5 s), then the video is unloaded to free memory. Not used on `/tyler` or OBS links.
+- Casual panel gets a **Lite** button (shuttle icon) that opens `lite.html`; Lite's "Live 3D" button returns.
+
 ## v1.0.47
 - Lite mode: `lite.html` plays a pre-rendered Grand Arrival tour (`lite-tour.mp4`, 960×540, 24 fps, 8.5 MB) behind the same glass panel, with Replay / Schedule / Live 3D. The still `lite-poster.jpg` shows if the video can't play.
 - Weak-device check at the top of the live page: no WebGL2, software-only graphics, or ≤2 GB memory + ≤2 cores → lite. Casual page also switches if it stays under 12 fps after the automatic step-down. `?live=1` skips the check for the visit; `?lite=1` forces lite. `/tyler` and OBS links are never redirected.

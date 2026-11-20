@@ -21,6 +21,7 @@ royale-style matches and as a public site. Live via Netlify from `main` of `rely
   The check is the inline script at the top of the viewer template (no WebGL2 / software GL / ≤2 GB+≤2 cores) plus the
   casual fps check (<12 fps twice after the step-down). `?live=1` skips it for the visit, `?lite=1` forces it.
   Re-render the video after big visual changes: `python3 tools/test/render_tour.py 0 45 24 /tmp/frames 960 540` (~50 min) then ffmpeg (see CHANGELOG v1.0.47).
+- Loading: casual shows `#preVid` (the tour video) until the 3D has drawn 45 frames; Lite button `#eLite` in the panel.
 - `src/events.js` — schedule shared by both pages: Versus feed `/api/public/maximus-events`, falls back to `FALLBACK_EVENTS`.
 - `src/icons.json` — gold vector icon set (traced from a Higgsfield sheet); `icon(name)` renders it with the `#goldG` gradient.
 - `src/colosseum.js` — procedural geometry (`buildColosseum(THREE, mergeGeometries, logos, opts)`); materials `M`; groups merged per material.
