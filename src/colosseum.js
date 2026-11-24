@@ -1,5 +1,5 @@
 // Intergalactic Colosseum — procedural geometry (shared by the web viewer and the GLB exporter)
-export const MODEL_VERSION = 'v1.0.48';
+export const MODEL_VERSION = 'v1.0.49';
 
 export function buildColosseum(THREE, mergeGeometries, logos = {}, opts = {}) {
   const PI = Math.PI, TAU = PI * 2, DEG = PI / 180;
@@ -135,18 +135,20 @@ export function buildColosseum(THREE, mergeGeometries, logos = {}, opts = {}) {
   // Combined crest: the VS shield set into the Maximus scales. S = width; centred on origin, faces +z.
   const CREST_H = 0.62;
   const crest = (S, matrix, group, o = {}) => {
-    const d = o.depth ?? Math.max(0.12, S * 0.02), oy = (0.39 - 0.31) * S, e = d * 0.06;
-    logo(logos.scales?.shapes, S, d * 0.8, o.gold ?? M.gold, matrix, group, 0, oy, e);           // sits just behind the shield face
-    logo(logos.vs?.sil, S * 0.62, d * 0.45, o.back ?? M.vsBlue, matrix, group, 0, oy - 0.08 * S, 2 * e);
-    logo(logos.vs?.shapes, S * 0.62, d, o.gold ?? M.gold, matrix, group, 0, oy - 0.08 * S);
-    if (o.backplate) logo(logos.vs?.sil, S * 0.62 * 1.02, d * 0.5, o.backplate, matrix, group, 0, oy - 0.08 * S, -d * 0.5 - e);
+    // v1.0.49: every layer gets its own depth band (fronts and backs at least 15% of the crest depth apart),
+    // so no two surfaces ever share a plane (near-coplanar layers flickered, most visibly on the hologram's back).
+    const d = o.depth ?? Math.max(0.12, S * 0.02), oy = (0.39 - 0.31) * S;
+    logo(logos.scales?.shapes, S, d * 0.7, o.gold ?? M.gold, matrix, group, 0, oy, d * 0.15);           // z 0.15d..0.85d, behind the shield face
+    logo(logos.vs?.sil, S * 0.62, d * 0.4, o.back ?? M.vsBlue, matrix, group, 0, oy - 0.08 * S, d * 0.3); // z 0.3d..0.7d, recessed fill
+    logo(logos.vs?.shapes, S * 0.62, d, o.gold ?? M.gold, matrix, group, 0, oy - 0.08 * S);             // z 0..d
+    if (o.backplate) logo(logos.vs?.sil, S * 0.62 * 1.02, d * 0.5, o.backplate, matrix, group, 0, oy - 0.08 * S, -d * 0.65);
   };
   // Maximus helmet-shield-scales emblem. S = width; centred, faces +z.
   const maxEmblem = (S, matrix, group, o = {}) => {
-    const d = o.depth ?? Math.max(0.12, S * 0.02), e = d * 0.06;
-    logo(logos.maxIcon?.sil, S, d * 0.45, o.back ?? M.pDeep, matrix, group, 0, 0, 2 * e);
-    logo(logos.maxIcon?.shapes, S, d, o.gold ?? M.gold, matrix, group);
-    if (o.backplate) logo(logos.maxIcon?.sil, S * 1.02, d * 0.5, o.backplate, matrix, group, 0, 0, -d * 0.5 - e);
+    const d = o.depth ?? Math.max(0.12, S * 0.02);
+    logo(logos.maxIcon?.sil, S, d * 0.5, o.back ?? M.pDeep, matrix, group, 0, 0, d * 0.2);   // z 0.2d..0.7d
+    logo(logos.maxIcon?.shapes, S, d, o.gold ?? M.gold, matrix, group);                     // z 0..d
+    if (o.backplate) logo(logos.maxIcon?.sil, S * 1.02, d * 0.5, o.backplate, matrix, group, 0, 0, -d * 0.65);
   };
 
   // ============ GROUND ============
@@ -542,7 +544,7 @@ export function buildColosseum(THREE, mergeGeometries, logos = {}, opts = {}) {
   // ============ HOLOGRAM (floating crest, two-sided) ============
   for (const side of [0, PI]) {
     const m = T(0, 46, 0).multiply(new THREE.Matrix4().makeRotationY(side)).multiply(T(0, 0, 0.6));
-    crest(34, m, 'Hologram', { depth: 0.3, gold: M.holo, back: M.holoBack });
+    crest(34, m, 'Hologram', { depth: 0.8, gold: M.holo, back: M.holoBack });
   }
   add(new THREE.TorusGeometry(19, 0.18, 8, 160), M.gCyan, RX(PI / 2).premultiply(T(0, 31, 0)), 'HoloRing');
   add(new THREE.TorusGeometry(17.4, 0.08, 8, 160), M.gViolet, RX(PI / 2).premultiply(T(0, 31, 0)), 'HoloRing');

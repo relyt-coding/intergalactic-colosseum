@@ -2793,6 +2793,36 @@ window.__royale = () => JSON.stringify({ round: royale.round, winner: royale.win
 window.__dbg = () => JSON.stringify({ theme: themeName, c1: skyMat.uniforms.uC1.value.toArray().map(v=>+v.toFixed(2)), sun: +skyMat.uniforms.uSun.value.toFixed(2), simT: +simT.toFixed(1), tickers: tickers.length });
 applyHash();
 
+// ---------------- DRIFT GUARD (v1.0.49) ----------------
+// While the camera spins on its own, look a few metres ahead along its path; if anything solid is there, spin the
+// other way before it gets inside. Boxed in both ways -> stop spinning. Only runs while nobody is steering.
+const dgSolids = [];
+root.updateMatrixWorld(true);
+root.traverse(o => {
+  if (!o.isMesh || !o.material || Array.isArray(o.material)) return;
+  let n = o, skip = false; while (n) { if (/Hologram|HoloRing|Halo|Runes|GravityRings|Flames|SunRay|Strobe|AtticLights|Asteroids|Nebula/.test(n.name)) { skip = true; break; } n = n.parent; }
+  if (skip || o.material.transparent || o.material.blending !== THREE.NormalBlending) return;
+  dgSolids.push({ mesh: o, box: new THREE.Box3().setFromObject(o) });
+});
+let dgT = 0, dgUser = false, dgFlips = [];
+controls.addEventListener('start', () => { dgUser = true; }); controls.addEventListener('end', () => { dgUser = false; });
+const dgRay = new THREE.Raycaster(), dgDir = new THREE.Vector3(), dgOff = new THREE.Vector3(), DG_LOOK = 4;
+function driftGuard(dt, t) {
+  if (!controls.autoRotate || touring || tween || dgUser || photoOn) return;
+  if ((dgT += dt) < 0.15) return; dgT = 0;
+  dgOff.subVectors(camera.position, controls.target);
+  if (dgOff.x * dgOff.x + dgOff.z * dgOff.z < 1) return;
+  dgDir.set(-dgOff.z, 0, dgOff.x).normalize(); if (controls.autoRotateSpeed < 0) dgDir.negate();  // the way OrbitControls spins
+  const near = []; for (const s of dgSolids) if (s.mesh.visible && s.box.distanceToPoint(camera.position) < DG_LOOK) near.push(s.mesh);
+  if (!near.length) return;
+  dgRay.set(camera.position, dgDir); dgRay.far = DG_LOOK;
+  if (!dgRay.intersectObjects(near, false).length) return;
+  dgFlips = dgFlips.filter(x => t - x < 4); dgFlips.push(t);
+  if (dgFlips.length >= 3) { controls.autoRotate = false; dgFlips = []; if (typeof tRotate !== 'undefined') tRotate.classList.remove('on'); }
+  else controls.autoRotateSpeed = -controls.autoRotateSpeed;
+}
+window.__dg = () => JSON.stringify({ solids: dgSolids.length, speed: controls.autoRotateSpeed, rot: controls.autoRotate });
+
 // ---------------- LOOP ----------------
 let simT = 0, skyFrames = 0;
 const clock = new THREE.Clock();
@@ -2831,6 +2861,7 @@ renderer.setAnimationLoop(() => {
     if (tween.t >= 1) tween = null;
   }
   for (const f of tickers) f(dt, t);
+  driftGuard(dt, t);
   if (!touring) controls.update(); else camera.lookAt(controls.target);
   composer.render();
 });

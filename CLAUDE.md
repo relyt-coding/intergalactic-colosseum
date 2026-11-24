@@ -36,7 +36,9 @@ royale-style matches and as a public site. Live via Netlify from `main` of `rely
 ## Gotchas (learned the hard way)
 - iPhone: never change renderer pixel ratio mid-session (blanks screen). Resolution is fixed at load (Quality setting reloads).
 - Startup order: menu tab is restored on load; anything it renders must exist (v1.0.34 crash: Fighters tab before fighter code → `fightersReady` flag).
-- Coplanar/near-coplanar surfaces flicker on phones: keep floor layers ≥ 2–3 cm apart; logarithmic depth is off on phones/weak GPUs.
+- NEVER put two surfaces on the same (or nearly the same) plane — Tyler's rule, it always flickers. Give every layer its own depth band, big in world units
+  (crests: layers ≥ 15% of the crest depth apart; floor layers ≥ 2–3 cm apart). Logarithmic depth is off on phones/weak GPUs, so this matters most there.
+- Auto-rotate has a drift guard (`driftGuard`, v1.0.49): add new solid scenery to the scene graph normally and it's covered; transparent/glow groups are skipped by name.
 - NaN pixels blow up the glow pass into black blocks: shaders clamp `1-dot()` before `pow`; a scrub pass runs before bloom.
 - User's PC uses Intel HD 630 (weak iGPU): `weakGPU` detection lowers pixels, disables soft shadows/AO by default. Test perf impact of anything new.
 - Headless test browser has no GPU, so the page would redirect to lite: every test script opens `index.html?live=1`.

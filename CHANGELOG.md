@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.49
+- Fixed the flickering on the back of the VS shield hologram. Its layers (gold VS, blue fill, gold scales) sat ~2 cm apart; now every crest and Maximus emblem in the model gives each layer its own depth band (fronts and backs at least 15% of the crest depth apart), and the hologram crest is thicker (0.3 → 0.8) so the gaps are big in world units too.
+- Drift guard: while the camera spins on its own (auto-rotate), it looks 4 m ahead along its path every 0.15 s; if anything solid is there it reverses direction, and if it is boxed in both ways (3 turn-backs in 4 s) it stops spinning. Skipped while you steer, during tours and photo mode. Debug: `__dg()`.
+- Model re-exported: `dist/intergalactic-colosseum-v1.0.49-compressed.glb` (1.7 MB).
+
 ## v1.0.48
 - Casual: the tour video (`lite-tour.mp4`, poster first) plays behind the glass panel while the live 3D loads, with a "Loading the live arena…" pill. It fades out once the 3D has drawn 45 frames (and at least 1.5 s), then the video is unloaded to free memory. Not used on `/tyler` or OBS links.
 - Casual panel gets a **Lite** button (shuttle icon) that opens `lite.html`; Lite's "Live 3D" button returns.
