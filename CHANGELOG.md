@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.52
+- Tails you can see from the front: the lemur's black-and-white ringed tail now sweeps out of its back, round to its right side and up beside the body with a curl at the top (black tip); the chameleon's tail comes round to its right side and coils into the classic spiral. Both used to sit straight behind the body, hidden by it and the seat.
+- Built as tubes along a smooth path (`tube()`); far-away animals use fewer rings / segments. Overview cost with animals on ≈ +360k triangles.
+
 ## v1.0.51
 - Animal crowd redesigned:
   - **Toucans**: folded wings with dark blue tips, curved orange bill with a yellow ridge and black tip, pale throat + yellow breast, blue eye rings with eyes, tail, red under-tail, blue-grey feet.

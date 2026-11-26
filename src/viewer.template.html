@@ -1043,6 +1043,12 @@ const crowd = (() => {
   const cone = (r, len, hex, rot, x, y, z) => { const g = new THREE.ConeGeometry(r, len, DET ? 8 : 5); g.applyMatrix4(rot); g.translate(x, y, z); return part(g, hex); };
   const RXm = a => new THREE.Matrix4().makeRotationX(a);
   const both = f => [f(1), f(-1)];   // mirrored pair (left / right)
+  // a tube along a smooth path through the given points (a tail), from t0 to t1 of the path
+  const tube = (pts, r, hex, t0 = 0, t1 = 1, o = { far: 2 }) => {
+    const full = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)));
+    const n = DET ? 10 : o.far, sub = new THREE.CatmullRomCurve3(Array.from({ length: n + 1 }, (_, i) => full.getPoint(t0 + (t1 - t0) * i / n)));
+    return part(new THREE.TubeGeometry(sub, n, r, DET ? 7 : 3, false), hex);
+  };
   const SPECIES = {
     toucan: () => [
       ell(0.2, 0.3, 0.18, 0, 0.5, -0.02, 0x15151a),                                   // black body
@@ -1083,7 +1089,10 @@ const crowd = (() => {
       ...both(m => ell(0.07, 0.09, 0.11, m * 0.13, 0.17, -0.04, 0x45a336, { s: 1 })),          // haunches
       ...both(m => ell(0.04, 0.1, 0.04, m * 0.1, 0.22, 0.15, 0x45a336, { s: 1, rx: 0.35 })),   // short front legs
       ...both(m => ell(0.05, 0.025, 0.055, m * 0.1, 0.11, 0.2, 0x2f7f26, { d: 1, s: 1 })),     // gripping hands
-      part(new THREE.TorusGeometry(0.12, 0.04, DET ? 6 : 3, DET ? 14 : 6, PI * 1.7).rotateY(PI / 2).translate(0, 0.25, -0.29), 0x4caf3a),   // curled tail
+      // tail: out from the back, round to the right side, then the classic spiral curl beside the body
+      tube((() => { const pts = [[0.02, 0.24, -0.2], [0.14, 0.2, -0.24], [0.25, 0.2, -0.14]];
+        for (let i = 0; i <= 16; i++) { const a = -0.6 - i / 16 * PI * 3, r = 0.16 * (1 - i / 16 * 0.75); pts.push([0.28, 0.3 + r * Math.sin(a), 0.0 + r * Math.cos(a)]); }
+        return pts; })(), 0.04, 0x4caf3a, 0, 1, { far: 10 }),
     ],
     lemur: () => {
       const parts = [
@@ -1098,9 +1107,12 @@ const crowd = (() => {
         ...both(m => ell(0.05, 0.18, 0.05, m * 0.17, 0.45, 0.06, 0x8d8f93, { s: 1, rz: m * 0.12 })),  // arms
         ...both(m => ell(0.045, 0.03, 0.05, m * 0.17, 0.28, 0.12, 0x2a2a2e, { d: 1, s: 1 })),             // hands
       ];
-      // ringed tail standing up behind: open tubes with small gaps, alternating black and white, black tip
-      for (let k = 0; k < 7; k++) parts.push(part(new THREE.CylinderGeometry(0.055, 0.055, 0.13, DET ? 8 : 4, 1, true).translate(0, 0.36 + k * 0.145, -0.27), k % 2 ? 0x1c1c20 : 0xf2f0ea));
-      parts.push(ell(0.055, 0.07, 0.055, 0, 1.4, -0.27, 0x1c1c20, { s: 1 }));
+      // ringed tail: out from the back, round to the right side, then up beside the body with a forward curl at the top.
+      // 9 tube segments along one path with small gaps, alternating white and black, black tip.
+      const TP = [[0.02, 0.24, -0.18], [0.16, 0.2, -0.22], [0.28, 0.26, -0.1], [0.3, 0.55, -0.06], [0.29, 0.9, -0.05], [0.27, 1.18, 0.0], [0.24, 1.32, 0.1]];
+      const NR = DET ? 9 : 5;
+      for (let k = 0; k < NR; k++) parts.push(tube(TP, 0.055 - k * 0.002 * 9 / NR, k % 2 ? 0x1c1c20 : 0xf2f0ea, k / NR + 0.004, (k + 1) / NR - 0.004));
+      parts.push(ell(0.05, 0.05, 0.05, 0.24, 1.32, 0.1, 0x1c1c20, { s: 1 }));
       return parts;
     },
   };
