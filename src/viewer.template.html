@@ -224,6 +224,12 @@
     background:rgba(14,12,38,.4);border:1px solid rgba(226,176,79,.35);padding:10px 8px;border-radius:12px;cursor:pointer}
   .evDock button:hover{border-color:#ffd27a}
   #eSched{display:none}
+  .evToggle{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;width:100%;margin-top:10px;text-align:left;cursor:pointer;
+    font:600 14px Inter,sans-serif;color:#efe8ff;background:rgba(14,12,38,.45);border:1px solid rgba(226,176,79,.4);padding:10px 12px;border-radius:12px}
+  .evToggle .ico{grid-row:1/3;width:26px;height:26px}
+  .evToggle em{font-style:normal;font-weight:400;font-size:13px;color:#cfc8f2}
+  .evToggle.on{background:rgba(226,176,79,.26);border-color:rgba(255,226,160,.85)}
+  .evToggle.on span::after{content:'  ON';color:#ffe2a0}
   #preVid{position:fixed;inset:0;z-index:3;background:#05061a;transition:opacity 1.2s ease}
   #preVid video{width:100%;height:100%;object-fit:cover;display:block}
   #preVid p{position:absolute;right:22px;bottom:18px;margin:0;font:600 14px Inter,sans-serif;letter-spacing:.08em;color:#ffe2a0;
@@ -335,6 +341,7 @@ else document.getElementById('loading').style.display = 'none';
       <div class="row">
         <button id="tLite">⚡ Lite mode</button>
         <button id="tCrowd" class="on">Crowd</button>
+        <button id="tAnimals" title="Swap the people for toucans, frogs, chameleons and lemurs">Animal crowd</button>
         <button data-show="ships" class="on">Ships</button>
         <button data-show="satellite" class="on">Satellite</button>
         <button data-show="spaceport" class="on">Spaceport</button>
@@ -942,10 +949,10 @@ const crowd = (() => {
   const teamA = [0x35d8ff, 0x3f7bff, 0x8b5cff], teamB = [0xff3fb4, 0xffc040, 0xb04dff];
   const colOf = p => { const pal = (p.s % 2 === 0) !== (p.seed < 0.22) ? teamA : teamB; return new THREE.Color(pal[Math.floor(p.seed * 997) % 3]); };
 
-  const shaderBits = (extraVert) => ({
+  const shaderBits = (extraVert, vDecl = '') => ({
     vertexShader: `#include <common>
       #include <logdepthbuf_pars_vertex>
-      attribute float aSeed; attribute float aAng; attribute vec3 aColor;
+      attribute float aSeed; attribute float aAng; attribute vec3 aColor; ${vDecl}
       uniform float uTime, uHype; varying vec3 vN, vV, vC; varying float vY;
       void main(){
         vec3 p = position;
@@ -960,12 +967,12 @@ const crowd = (() => {
         #include <logdepthbuf_vertex>
       }`,
   });
-  const mkMat = (frag, extraVert = '') => new THREE.ShaderMaterial({
+  const mkMat = (frag, extraVert = '', vDecl = '', fDecl = '') => new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 }, uHype: { value: 0 } },
-    ...shaderBits(extraVert),
+    ...shaderBits(extraVert, vDecl),
     fragmentShader: `#include <common>
       #include <logdepthbuf_pars_fragment>
-      uniform float uHype; varying vec3 vN, vV, vC; varying float vY;
+      uniform float uHype; varying vec3 vN, vV, vC; varying float vY; ${fDecl}
       void main(){
         #include <logdepthbuf_fragment>
         ${frag}
@@ -1011,7 +1018,90 @@ const crowd = (() => {
     const st = sticks.filter(inS); if (st.length) g.add(make(stick.clone(), stickMat, st));
   }
   scene.add(g);
-  tickers.push((dt, t) => { for (const m of [bodyMat, stickMat]) { m.uniforms.uTime.value = t; m.uniforms.uHype.value = mm; } });
+
+  // ---- v1.0.50 animal crowd: the four competing species, same seats, same size as the people ----
+  // Low-poly, real colours (lit softly) + the team-colour rim. Each seat gets a species from its seed.
+  // Parts overlap as solid volumes only; no two surfaces share a plane (Tyler's rule).
+  const animalMat = mkMat(`vec3 n = normalize(vN);
+        float l = 0.3 + 0.7 * max(0.0, dot(n, normalize(vec3(0.25, 1.0, 0.35))));
+        float rim = pow(clamp(1.0 - abs(dot(n, normalize(vV))), 0.0, 1.0), 2.4);
+        vec3 col = vB * l * (0.5 + 0.4 * uHype) + vC * rim * (0.35 + 0.55 * uHype);
+        gl_FragColor = vec4(col, 1.0);`, `vB = aBase;`, 'attribute vec3 aBase; varying vec3 vB;', 'varying vec3 vB;');
+  const part = (geo, hex) => { const c = new THREE.Color(hex), n = geo.attributes.position.count, a = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) c.toArray(a, i * 3); geo.setAttribute('aBase', new THREE.BufferAttribute(a, 3)); return geo; };
+  const ell = (rx, ry, rz, x, y, z, hex, w = 5, h = 4) => part(new THREE.SphereGeometry(1, w, h).scale(rx, ry, rz).translate(x, y, z), hex);
+  const cone = (r, len, hex, rot, x, y, z, seg = 5) => { const g = new THREE.ConeGeometry(r, len, seg); g.applyMatrix4(rot); g.translate(x, y, z); return part(g, hex); };
+  const RXm = a => new THREE.Matrix4().makeRotationX(a), RZm = a => new THREE.Matrix4().makeRotationZ(a);
+  const SPECIES = {
+    toucan: () => [
+      ell(0.21, 0.33, 0.19, 0, 0.55, 0, 0x16161a),                 // black body
+      ell(0.13, 0.17, 0.08, 0, 0.66, 0.13, 0xffd23a, 4, 3),             // yellow chest
+      ell(0.16, 0.16, 0.16, 0, 0.98, 0, 0x16161a),                // head
+      ell(0.075, 0.075, 0.05, 0, 1.0, 0.11, 0xfff1b8, 4, 3),      // pale face patch
+      cone(0.085, 0.4, 0xff7a1a, RXm(PI / 2), 0, 0.97, 0.33, 5),   // the big bill
+      ell(0.035, 0.035, 0.035, 0.1, 1.03, 0.1, 0x3a7bff, 4, 3),   // blue eye rings
+      ell(0.035, 0.035, 0.035, -0.1, 1.03, 0.1, 0x3a7bff, 4, 3),
+      part(new THREE.BoxGeometry(0.16, 0.06, 0.3).translate(0, 0.28, -0.22), 0xd8202a),   // red under-tail
+    ],
+    frog: () => [
+      ell(0.3, 0.3, 0.27, 0, 0.42, 0, 0x3fbf4a),                  // green body
+      ell(0.2, 0.2, 0.1, 0, 0.45, 0.2, 0xd9ef7a, 4, 3),                 // pale belly
+      ell(0.27, 0.17, 0.23, 0, 0.82, 0.04, 0x3fbf4a),             // wide head
+      ell(0.085, 0.085, 0.085, 0.13, 0.98, 0.1, 0xe0242c, 4, 3),   // red eyes
+      ell(0.085, 0.085, 0.085, -0.13, 0.98, 0.1, 0xe0242c, 4, 3),
+      ell(0.1, 0.05, 0.14, 0.24, 0.1, 0.18, 0xff8a2a, 4, 3),      // orange feet
+      ell(0.1, 0.05, 0.14, -0.24, 0.1, 0.18, 0xff8a2a, 4, 3),
+    ],
+    chameleon: () => [
+      ell(0.2, 0.32, 0.24, 0, 0.55, 0, 0x4caf3a),                 // leaf-green body
+      part(new THREE.BoxGeometry(0.44, 0.05, 0.3).translate(0, 0.6, 0.02), 0xf2d22e),   // yellow side stripe (sticks out past the body)
+      ell(0.15, 0.14, 0.2, 0, 0.98, 0.05, 0x4caf3a),              // head
+      cone(0.11, 0.26, 0x3b9a2e, RXm(-0.55), 0, 1.15, -0.06, 4),   // casque
+      ell(0.07, 0.07, 0.07, 0.13, 1.0, 0.1, 0x8bd35a, 4, 3),      // turret eyes
+      ell(0.07, 0.07, 0.07, -0.13, 1.0, 0.1, 0x8bd35a, 4, 3),
+      ell(0.03, 0.03, 0.03, 0.19, 1.0, 0.12, 0x101010, 4, 3),
+      ell(0.03, 0.03, 0.03, -0.19, 1.0, 0.12, 0x101010, 4, 3),
+      part(new THREE.TorusGeometry(0.13, 0.045, 3, 6, PI * 1.6).rotateY(PI / 2).translate(0, 0.3, -0.3), 0x4caf3a),   // curled tail
+    ],
+    lemur: () => {
+      const parts = [
+        ell(0.2, 0.32, 0.19, 0, 0.55, 0, 0x8d8f93),               // grey body
+        ell(0.12, 0.2, 0.08, 0, 0.6, 0.12, 0xe9e6df, 4, 3),             // pale belly
+        ell(0.16, 0.15, 0.15, 0, 0.98, 0, 0x8d8f93),              // head
+        ell(0.11, 0.09, 0.08, 0, 0.95, 0.11, 0xf2f0ea, 4, 3),     // white face
+        cone(0.06, 0.1, 0x2a2a2e, RXm(PI / 2), 0, 0.93, 0.21, 5),  // dark muzzle
+        ell(0.04, 0.04, 0.03, 0.06, 1.0, 0.17, 0xffa21a, 4, 3),   // amber eyes
+        ell(0.04, 0.04, 0.03, -0.06, 1.0, 0.17, 0xffa21a, 4, 3),
+        cone(0.05, 0.1, 0x8d8f93, RZm(-0.5), 0.13, 1.12, 0, 4),   // ears
+        cone(0.05, 0.1, 0x8d8f93, RZm(0.5), -0.13, 1.12, 0, 4),
+      ];
+      // ringed tail standing up behind: separate open tubes with small gaps, alternating black and white
+      for (let k = 0; k < 5; k++) parts.push(part(new THREE.CylinderGeometry(0.055, 0.055, 0.15, 4, 1, true).translate(0, 0.38 + k * 0.17, -0.27), k % 2 ? 0x1c1c20 : 0xf2f0ea));
+      return parts;
+    },
+  };
+  const SPECIES_KEYS = Object.keys(SPECIES);
+  const speciesOf = p => SPECIES_KEYS[Math.floor(p.seed * 9973) % 4];
+  let animals = null;
+  const buildAnimals = () => {
+    const ag = new THREE.Group(); ag.name = 'CrowdAnimals';
+    for (const k of SPECIES_KEYS) {
+      const geo = mergeGeometries(SPECIES[k]());
+      for (let s = 0; s < 4; s++) { const list = people.filter(p => p.s === s && speciesOf(p) === k); if (list.length) ag.add(make(geo.clone(), animalMat, list)); }
+    }
+    for (let s = 0; s < 4; s++) { const st = sticks.filter(p => p.s === s); if (st.length) ag.add(make(stick.clone(), stickMat, st)); }
+    ag.visible = false; scene.add(ag); return ag;
+  };
+  // flip between people and animals; the Crowd on/off switch still hides whichever is showing
+  g.userData.setAnimals = on => {
+    if (on && !animals) animals = buildAnimals();
+    g.userData.animals = on;
+    for (const c of g.children) c.visible = !on;
+    if (animals) animals.visible = on && g.visible;
+  };
+  g.userData.syncAnimals = () => { if (animals) animals.visible = g.userData.animals && g.visible; for (const c of g.children) c.visible = !g.userData.animals; };
+  tickers.push((dt, t) => { for (const m of [bodyMat, stickMat, animalMat]) { m.uniforms.uTime.value = t; m.uniforms.uHype.value = mm; }
+    if (animals) animals.visible = !!g.userData.animals && g.visible; });
   return g;
 })();
 
@@ -1575,6 +1665,10 @@ if (CASUAL) {
   evEl.querySelector('[data-ev=tours]').appendChild(document.getElementById('tourList'));
   const camGrid = drawer.querySelector('[data-pane=camera] .grid');
   evEl.querySelector('[data-ev=camera]').appendChild(camGrid);
+  { const eb = document.createElement('button'); eb.id = 'eAnimals'; eb.className = 'evToggle';
+    eb.innerHTML = icon('laurel') + '<span>Animal crowd</span><em>Toucans, frogs, chameleons &amp; lemurs</em>';
+    eb.onclick = () => document.getElementById('tAnimals').click();
+    evEl.querySelector('[data-ev=camera]').appendChild(eb); }
   const eTour = document.getElementById('eTour'), eScenes = document.getElementById('eScenes'), eSound = document.getElementById('eSound');
   let evPane = 'list';
   const phone = () => matchMedia('(max-width:640px)').matches;
@@ -2486,6 +2580,16 @@ function applyShow() {
 }
 document.querySelectorAll('[data-show]').forEach(b => b.onclick = () => { showOpts[b.dataset.show] = !showOpts[b.dataset.show]; applyShow(); });
 document.getElementById('tCrowd').onclick = () => { showOpts.crowd = !showOpts.crowd; applyShow(); };
+// v1.0.50 animal crowd switch (remembered in this browser; '-animals' in an OBS link turns it on)
+function setAnimalCrowd(on, save = true) {
+  crowd.userData.setAnimals(on);
+  document.getElementById('tAnimals').classList.toggle('on', on);
+  const eb = document.getElementById('eAnimals'); if (eb) eb.classList.toggle('on', on);
+  if (save) try { localStorage.setItem('colosseum-animals', on ? '1' : '0'); } catch (e) {}
+}
+document.getElementById('tAnimals').onclick = () => setAnimalCrowd(!crowd.userData.animals);
+try { if (localStorage.getItem('colosseum-animals') === '1') setAnimalCrowd(true, false); } catch (e) {}
+window.__animals = on => setAnimalCrowd(on, false);
 document.getElementById('tLite').onclick = () => {
   const on = !document.getElementById('tLite').classList.contains('on');
   for (const k of ['ships', 'satellite', 'spaceport', 'asteroids', 'crowd']) showOpts[k] = !on;
@@ -2765,6 +2869,7 @@ function applyHash() {
   document.body.classList.add('obs'); setClean(true);
   for (const th of Object.keys(THEMES)) if (tk.includes(th)) setTheme(th, true);
   if (tk.includes('nocrowd')) { showOpts.crowd = false; applyShow(); }
+  if (tk.includes('animals')) setAnimalCrowd(true, false);
   if (tk.includes('lite')) { for (const k of ['ships', 'satellite', 'spaceport', 'asteroids', 'crowd']) showOpts[k] = false; applyShow(); }
   if (tk.includes('music')) { try { aSound.click(); aMusic.click(); } catch (e) {} }
   const n = tk.map(Number).find(x => x >= 1 && x <= TOURS.length);

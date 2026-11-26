@@ -59,6 +59,12 @@
     background:rgba(14,12,38,.4);border:1px solid rgba(226,176,79,.35);padding:10px 8px;border-radius:12px;cursor:pointer}
   .evDock button:hover{border-color:#ffd27a}
   #eSched{display:none}
+  .evToggle{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;width:100%;margin-top:10px;text-align:left;cursor:pointer;
+    font:600 14px Inter,sans-serif;color:#efe8ff;background:rgba(14,12,38,.45);border:1px solid rgba(226,176,79,.4);padding:10px 12px;border-radius:12px}
+  .evToggle .ico{grid-row:1/3;width:26px;height:26px}
+  .evToggle em{font-style:normal;font-weight:400;font-size:13px;color:#cfc8f2}
+  .evToggle.on{background:rgba(226,176,79,.26);border-color:rgba(255,226,160,.85)}
+  .evToggle.on span::after{content:'  ON';color:#ffe2a0}
   #preVid{position:fixed;inset:0;z-index:3;background:#05061a;transition:opacity 1.2s ease}
   #preVid video{width:100%;height:100%;object-fit:cover;display:block}
   #preVid p{position:absolute;right:22px;bottom:18px;margin:0;font:600 14px Inter,sans-serif;letter-spacing:.08em;color:#ffe2a0;

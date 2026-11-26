@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.50
+- **Animal crowd**: swap the people in the stands for low-poly toucans, frogs, chameleons and lemurs (the four species that compete at the events). Same seats, same size, real colours with the team-colour rim, and they still cheer, do the wave and wave light sticks.
+  - `/tyler`: Scene tab → **Animal crowd**. Public page: Scenes → **Animal crowd** toggle. OBS links: add `-animals`. The choice is remembered in the browser.
+  - Built only the first time it's turned on. Cost while on: about +255k triangles in the overview (people ≈ 760k total, animals ≈ 1.02M), +12 draw calls.
+  - Every part is a solid shape on its own depth; no shared planes.
+
 ## v1.0.49
 - Fixed the flickering on the back of the VS shield hologram. Its layers (gold VS, blue fill, gold scales) sat ~2 cm apart; now every crest and Maximus emblem in the model gives each layer its own depth band (fronts and backs at least 15% of the crest depth apart), and the hologram crest is thicker (0.3 → 0.8) so the gaps are big in world units too.
 - Drift guard: while the camera spins on its own (auto-rotate), it looks 4 m ahead along its path every 0.15 s; if anything solid is there it reverses direction, and if it is boxed in both ways (3 turn-backs in 4 s) it stops spinning. Skipped while you steer, during tours and photo mode. Debug: `__dg()`.
