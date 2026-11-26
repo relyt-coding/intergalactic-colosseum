@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.51
+- Animal crowd redesigned:
+  - **Toucans**: folded wings with dark blue tips, curved orange bill with a yellow ridge and black tip, pale throat + yellow breast, blue eye rings with eyes, tail, red under-tail, blue-grey feet.
+  - **Frogs**: smaller and squat (about 2/3 the others' height), folded back legs, front arms, orange feet, big red eyes with slit pupils, mouth line.
+  - **Chameleons**: seated with haunches and short front legs, yellow stripe painted round the body, helmet crest, back ridge, turret eyes with pupils, curled tail.
+  - **Lemurs**: dark eye patches around amber eyes, dark nose, ears, arms and hands, taller ringed tail with a black tip.
+- Detail by distance: animals within 24 m of the camera (16 m on weak graphics, 12 m on phones) use the smooth full version; the rest use a light version without the tiny parts. Re-sorted 4× a second while the camera moves. Overview cost while on: ≈ +326k triangles (1.09M vs 761k), no extra draw calls.
+
 ## v1.0.50
 - **Animal crowd**: swap the people in the stands for low-poly toucans, frogs, chameleons and lemurs (the four species that compete at the events). Same seats, same size, real colours with the team-colour rim, and they still cheer, do the wave and wave light sticks.
   - `/tyler`: Scene tab → **Animal crowd**. Public page: Scenes → **Animal crowd** toggle. OBS links: add `-animals`. The choice is remembered in the browser.
