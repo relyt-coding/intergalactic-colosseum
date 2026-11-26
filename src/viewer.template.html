@@ -1030,7 +1030,9 @@ const crowd = (() => {
         float sheen = pow(max(0.0, dot(reflect(-L, n), v)), 18.0) * 0.22;
         float rim = pow(clamp(1.0 - abs(dot(n, v)), 0.0, 1.0), 3.0);
         vec3 col = vB * (amb + key) * (0.9 + 0.35 * uHype) + sheen + vC * rim * (0.16 + 0.45 * uHype);
-        gl_FragColor = vec4(col, 1.0);`, `vB = aBase;`, 'attribute vec3 aBase; varying vec3 vB;', 'varying vec3 vB;');
+        gl_FragColor = vec4(col, 1.0);`, `vB = aBase;
+        float sw = sin(uTime * (0.7 + aSeed * 0.8) + aSeed * 50.0) * (0.05 + 0.07 * uHype);   // gentle idle sway, from the seat up
+        p.x += sw * max(p.y, 0.0);`, 'attribute vec3 aBase; varying vec3 vB;', 'varying vec3 vB;');
   const part = (geo, hex) => { const c = new THREE.Color(hex), n = geo.attributes.position.count, a = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) c.toArray(a, i * 3); geo.setAttribute('aBase', new THREE.BufferAttribute(a, 3)); return geo; };
   // v1.0.51: smoother on real graphics cards, lighter on phones / weak GPUs
@@ -1067,6 +1069,28 @@ const crowd = (() => {
   ];
   // Chibi "vinyl toy" proportions: big head, big eyes, body resting on the seat (y = 0), feet tucked in.
   // Patches sit mostly inside the body so they read as smooth colour, not stickers. Scale per species sets the height.
+  // Panther chameleons come in many colours: three colourways so the stands aren't a sea of green next to the frogs
+  const CHAM_PAL = {
+    green: { body: 0x4caf3a, belly: 0xa6dc5a, stripe: 0xf2d22e, dark: 0x3d9a30, leg: 0x45a336 },
+    teal:  { body: 0x1fa7a0, belly: 0x9fe6d8, stripe: 0xf4f1e6, dark: 0x15807a, leg: 0x1a958f },
+    red:   { body: 0xe0562a, belly: 0xffb26b, stripe: 0xffe04a, dark: 0xb8411d, leg: 0xcc4b24 },
+  };
+  const CHAM = P => ({ scale: 1.3, parts: () => [
+    ell(0.17, 0.23, 0.22, 0, 0.25, -0.03, P.body, { rx: -0.2, paint: (x, y, z) => z > 0.55 && Math.abs(x) < 0.6 ? P.belly : Math.abs(y + 0.05) < 0.16 && Math.abs(x) > 0.55 ? P.stripe : null }),
+    ell(0.045, 0.035, 0.18, 0, 0.46, -0.09, P.dark, { d: 1, s: 1, rx: -0.35 }),      // ridge down the back
+    ell(0.12, 0.12, 0.17, 0, 0.56, 0.08, P.body),                                     // head
+    ell(0.085, 0.075, 0.12, 0, 0.535, 0.19, P.body),                                // blunt rounded muzzle
+    ell(0.075, 0.01, 0.1, 0, 0.51, 0.22, P.dark, { d: 1, s: 1 }),                      // mouth line
+    ell(0.035, 0.05, 0.17, 0, 0.665, -0.03, P.dark, { rx: 0.35 }),                   // helmet crest along the top of the head, rising to the back
+    ...both(m => ell(0.07, 0.07, 0.07, m * 0.1, 0.6, 0.14, P.body)),                 // turret eyes
+    ...both(m => eye(m, 0.122, 0.605, 0.19, 0.034)),
+    ...both(m => ell(0.07, 0.08, 0.1, m * 0.13, 0.09, -0.06, P.leg, { d: 1, s: 1 })),               // haunches
+    ...both(m => ell(0.038, 0.09, 0.038, m * 0.1, 0.1, 0.14, P.leg, { s: 1, rx: 0.3 })),           // front legs
+    ...both(m => ell(0.05, 0.022, 0.05, m * 0.1, 0.02, 0.18, P.dark, { d: 1, s: 1 })),             // gripping hands
+    tube((() => { const pts = [[0.02, 0.12, -0.2], [0.14, 0.1, -0.24], [0.25, 0.12, -0.14]];
+      for (let i = 0; i <= 16; i++) { const a = -0.6 - i / 16 * PI * 3, r = 0.14 * (1 - i / 16 * 0.75); pts.push([0.27, 0.2 + r * Math.sin(a), 0.0 + r * Math.cos(a)]); }
+      return pts; })(), 0.038, P.body, 0, 1, { far: 10 }),
+  ] });
   const SPECIES = {
     toucan: { scale: 1.3, parts: () => [
       ell(0.2, 0.25, 0.19, 0, 0.27, -0.01, 0x15151a, { paint: (x, y, z) => z > 0.35 && Math.abs(x) < 0.7 ? (y > 0.45 ? 0xfff1c4 : 0xffcf3a) : null }),   // black body, yellow breast, pale throat
@@ -1094,44 +1118,32 @@ const crowd = (() => {
       ...both(m => ell(0.016, 0.016, 0.012, m * 0.105, 0.575, 0.15, 0xffffff, { d: 1, s: 1 })), // highlights
       ell(0.12, 0.012, 0.035, 0, 0.375, 0.215, 0x1f6b2a, { d: 1, s: 1 }),             // smile
     ] },
-    chameleon: { scale: 1.3, parts: () => [
-      ell(0.18, 0.24, 0.22, 0, 0.26, -0.03, 0x4caf3a, { rx: -0.2, paint: (x, y, z) => z > 0.55 && Math.abs(x) < 0.6 ? 0xa6dc5a : Math.abs(y + 0.05) < 0.16 && Math.abs(x) > 0.55 ? 0xf2d22e : null }),   // green body, pale belly, yellow side stripe
-      ell(0.05, 0.035, 0.18, 0, 0.47, -0.09, 0x3d9a30, { d: 1, s: 1, rx: -0.35 }),    // ridge down the back
-      ell(0.14, 0.13, 0.17, 0, 0.58, 0.07, 0x4caf3a),                                  // head
-      ell(0.055, 0.12, 0.11, 0, 0.7, -0.02, 0x3d9a30, { rx: 0.6 }),                    // helmet crest
-      ...both(m => ell(0.075, 0.075, 0.075, m * 0.11, 0.61, 0.12, 0x6fbf45)),         // turret eyes
-      ...both(m => eye(m, 0.13, 0.615, 0.17, 0.04)),
-      ...both(m => ell(0.07, 0.08, 0.1, m * 0.13, 0.09, -0.06, 0x45a336, { d: 1, s: 1 })),  // haunches
-      ...both(m => ell(0.038, 0.09, 0.038, m * 0.1, 0.1, 0.14, 0x45a336, { s: 1, rx: 0.3 })),   // front legs
-      ...both(m => ell(0.05, 0.022, 0.05, m * 0.1, 0.02, 0.18, 0x2f7f26, { d: 1, s: 1 })),      // gripping hands
-      // tail: out from the back, round to the right side, then the classic spiral curl
-      tube((() => { const pts = [[0.02, 0.12, -0.2], [0.14, 0.1, -0.24], [0.25, 0.12, -0.14]];
-        for (let i = 0; i <= 16; i++) { const a = -0.6 - i / 16 * PI * 3, r = 0.14 * (1 - i / 16 * 0.75); pts.push([0.27, 0.2 + r * Math.sin(a), 0.0 + r * Math.cos(a)]); }
-        return pts; })(), 0.038, 0x4caf3a, 0, 1, { far: 10 }),
-    ] },
+    chameleon: CHAM(CHAM_PAL.green), chameleonTeal: CHAM(CHAM_PAL.teal), chameleonRed: CHAM(CHAM_PAL.red),
     lemur: { scale: 1.3, parts: () => {
       const parts = [
         ell(0.2, 0.24, 0.18, 0, 0.26, -0.01, 0x8d8f93, { paint: (x, y, z) => z > 0.55 && Math.abs(x) < 0.55 && y < 0.6 ? 0xe9e6df : null }),   // grey body, pale belly
         ell(0.17, 0.15, 0.15, 0, 0.61, 0.02, 0x8d8f93, { paint: (x, y, z) => z > 0.3 && y < 0.55 ? 0xf2f0ea : null }),   // grey head, white face
         ...both(m => ell(0.06, 0.055, 0.035, m * 0.062, 0.63, 0.13, 0x2a2a2e)),       // dark eye patches
         ...both(m => eye(m, 0.064, 0.635, 0.15, 0.036, 0xff9a10)),                     // big amber eyes
-        ell(0.04, 0.032, 0.05, 0, 0.56, 0.16, 0x2a2a2e, { d: 1, s: 1 }),                     // nose
-        ...both(m => ell(0.05, 0.07, 0.03, m * 0.13, 0.74, -0.01, 0x7a7c80, { s: 1, rz: m * -0.45 })),   // ears
+        cone(0.065, 0.13, 0xf2f0ea, RXm(PI / 2), 0, 0.565, 0.19),                          // pointed white muzzle
+        ell(0.03, 0.026, 0.03, 0, 0.565, 0.255, 0x1c1c20, { s: 1 }),                       // black nose at the tip
+        ...both(m => ell(0.06, 0.09, 0.03, m * 0.135, 0.77, -0.01, 0x6f7175, { s: 1, rz: m * -0.4 })),   // bigger pointed ears
         ...both(m => ell(0.05, 0.13, 0.05, m * 0.16, 0.25, 0.07, 0x8d8f93, { s: 1, rz: m * 0.2 })),    // arms
         ...both(m => ell(0.04, 0.025, 0.045, m * 0.15, 0.13, 0.14, 0x2a2a2e, { d: 1, s: 1 })),         // hands
         ...both(m => ell(0.05, 0.025, 0.07, m * 0.08, 0.02, 0.13, 0x2a2a2e, { d: 1, s: 1 })),               // feet
       ];
       // ringed tail: out from the back, round to the right side, then up beside the body with a curl
-      const TP = [[0.02, 0.12, -0.16], [0.16, 0.1, -0.2], [0.27, 0.16, -0.1], [0.29, 0.4, -0.06], [0.28, 0.68, -0.05], [0.26, 0.9, 0.0], [0.23, 1.0, 0.09]];
+      const TP = [[0.02, 0.12, -0.16], [0.16, 0.1, -0.2], [0.27, 0.16, -0.12], [0.3, 0.45, -0.13], [0.28, 0.76, -0.17], [0.21, 0.98, -0.1], [0.17, 1.03, 0.04]];   // question-mark curve
       const NR = DET ? 9 : 5;
       for (let k = 0; k < NR; k++) parts.push(tube(TP, 0.05 - k * 0.0015 * 9 / NR, k % 2 ? 0x1c1c20 : 0xf2f0ea, k / NR + 0.004, (k + 1) / NR - 0.004));
-      parts.push(ell(0.045, 0.045, 0.045, 0.23, 1.0, 0.09, 0x1c1c20, { s: 1 }));
+      parts.push(ell(0.045, 0.045, 0.045, 0.17, 1.03, 0.04, 0x1c1c20, { s: 1 }));
       return parts;
     } },
   };
   const SPECIES_KEYS = Object.keys(SPECIES);
   const speciesGeo = (k, det) => { DET = det; const S = SPECIES[k], g = mergeGeometries(S.parts().flat().filter(Boolean)); g.scale(S.scale, S.scale, S.scale); DET = true; return g; };
-  const speciesOf = p => SPECIES_KEYS[Math.floor(p.seed * 9973) % 4];
+  const speciesOf = p => { const k = ['toucan', 'frog', 'chameleon', 'lemur'][Math.floor(p.seed * 9973) % 4];
+    return k === 'chameleon' ? ['chameleon', 'chameleonTeal', 'chameleonRed'][Math.floor(p.seed * 31337) % 3] : k; };
   // Near animals use the full version, the rest the light one. Re-sorted every 0.25 s while the camera moves.
   const NEAR = isMobile ? 12 : weakGPU ? 16 : 24, NEAR2 = NEAR * NEAR;
   let animals = null, aSets = null, lodT = 0; const lodCam = new THREE.Vector3(1e9, 0, 0);

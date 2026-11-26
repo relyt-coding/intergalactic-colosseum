@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.54
+- Chameleons now come in three panther-chameleon colourways (leaf green / yellow stripe, turquoise / white stripe, fiery orange-red / yellow stripe), so the stands aren't a sea of green next to the frogs. New head: rounded muzzle with a mouth line and a helmet crest lying back along the top of the head (no more "ears" or "beak").
+- Lemurs: pointed white muzzle with a black nose at the tip, bigger pointed ears, and a question-mark tail.
+- Idle life: every animal sways gently on its own rhythm from the seat up (a bit more on match day).
+- Overview cost with animals on ≈ +460k triangles, +2 draw calls.
+
 ## v1.0.53
 - Animal crowd rebuilt as cute "vinyl toy" animals (less uncanny):
   - Big heads and big cartoon eyes (white, pupil, highlight); bodies rest on the seat with feet attached (no more floating).
