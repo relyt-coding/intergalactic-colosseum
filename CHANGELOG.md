@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.53
+- Animal crowd rebuilt as cute "vinyl toy" animals (less uncanny):
+  - Big heads and big cartoon eyes (white, pupil, highlight); bodies rest on the seat with feet attached (no more floating).
+  - Bellies, breasts, stripes and the lemur's face are painted onto the body surface itself (`paint` in `ell`) instead of being stuck-on patches — no near-coplanar layers, so no blotches or flicker.
+  - Softer lighting: sky/bounce ambient, wrapped key light, a gentle sheen, and only a faint team-colour rim.
+  - Each animal is turned slightly at random so the stands look natural.
+  - Red-eyed tree frogs get blue flanks and a smile; toucans keep the folded wings, blue eye skin and black-tipped bill.
+- Far versions: one dark eye instead of white/pupil/highlight, and no feet / little arms / bill ridge. Overview cost with animals on ≈ +428k triangles.
+
 ## v1.0.52
 - Tails you can see from the front: the lemur's black-and-white ringed tail now sweeps out of its back, round to its right side and up beside the body with a curl at the top (black tip); the chameleon's tail comes round to its right side and coils into the classic spiral. Both used to sit straight behind the body, hidden by it and the seat.
 - Built as tubes along a smooth path (`tube()`); far-away animals use fewer rings / segments. Overview cost with animals on ≈ +360k triangles.

@@ -1022,10 +1022,14 @@ const crowd = (() => {
   // ---- v1.0.50 animal crowd: the four competing species, same seats, same size as the people ----
   // Low-poly, real colours (lit softly) + the team-colour rim. Each seat gets a species from its seed.
   // Parts overlap as solid volumes only; no two surfaces share a plane (Tyler's rule).
-  const animalMat = mkMat(`vec3 n = normalize(vN);
-        float l = 0.3 + 0.7 * max(0.0, dot(n, normalize(vec3(0.25, 1.0, 0.35))));
-        float rim = pow(clamp(1.0 - abs(dot(n, normalize(vV))), 0.0, 1.0), 2.4);
-        vec3 col = vB * l * (0.5 + 0.4 * uHype) + vC * rim * (0.35 + 0.55 * uHype);
+  const animalMat = mkMat(`vec3 n = normalize(vN), v = normalize(vV), L = normalize(vec3(0.3, 0.9, 0.45));
+        // soft "vinyl toy" look: sky/bounce ambient, a wrapped key light, a gentle sheen and only a faint team-colour rim
+        float hemi = 0.5 + 0.5 * n.y;
+        vec3 amb = mix(vec3(0.15, 0.11, 0.2), vec3(0.3, 0.33, 0.48), hemi);
+        float key = clamp((dot(n, L) + 0.35) / 1.35, 0.0, 1.0) * 0.75;
+        float sheen = pow(max(0.0, dot(reflect(-L, n), v)), 18.0) * 0.22;
+        float rim = pow(clamp(1.0 - abs(dot(n, v)), 0.0, 1.0), 3.0);
+        vec3 col = vB * (amb + key) * (0.9 + 0.35 * uHype) + sheen + vC * rim * (0.16 + 0.45 * uHype);
         gl_FragColor = vec4(col, 1.0);`, `vB = aBase;`, 'attribute vec3 aBase; varying vec3 vB;', 'varying vec3 vB;');
   const part = (geo, hex) => { const c = new THREE.Color(hex), n = geo.attributes.position.count, a = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) c.toArray(a, i * 3); geo.setAttribute('aBase', new THREE.BufferAttribute(a, 3)); return geo; };
@@ -1036,9 +1040,15 @@ const crowd = (() => {
   // ellipsoid part: radii, centre, colour, { s: small, d: detail only (near version), rx/ry/rz: tilt }
   const ell = (rx, ry, rz, x, y, z, hex, o = {}) => {
     if (o.d && !DET) return null;
-    const [w, h] = seg(o), g = new THREE.SphereGeometry(1, w, h).scale(rx, ry, rz);
-    if (o.rx) g.rotateX(o.rx); if (o.ry) g.rotateY(o.ry); if (o.rz) g.rotateZ(o.rz);
-    return part(g.translate(x, y, z), hex);
+    const [w, h] = o.paint ? (DET ? [12, 10] : [6, 4]) : seg(o), g = new THREE.SphereGeometry(1, w, h);
+    let cols = null;
+    if (o.paint) {   // colour painted onto the surface itself (belly, stripe...): no extra layer, so nothing can flicker
+      const P = g.attributes.position, c = new THREE.Color(); cols = new Float32Array(P.count * 3);
+      for (let i = 0; i < P.count; i++) { c.set(o.paint(P.getX(i), P.getY(i), P.getZ(i)) ?? hex); c.toArray(cols, i * 3); }
+    }
+    g.scale(rx, ry, rz); if (o.rx) g.rotateX(o.rx); if (o.ry) g.rotateY(o.ry); if (o.rz) g.rotateZ(o.rz);
+    g.translate(x, y, z); part(g, hex); if (cols) g.setAttribute('aBase', new THREE.BufferAttribute(cols, 3));
+    return g;
   };
   const cone = (r, len, hex, rot, x, y, z) => { const g = new THREE.ConeGeometry(r, len, DET ? 8 : 5); g.applyMatrix4(rot); g.translate(x, y, z); return part(g, hex); };
   const RXm = a => new THREE.Matrix4().makeRotationX(a);
@@ -1049,75 +1059,78 @@ const crowd = (() => {
     const n = DET ? 10 : o.far, sub = new THREE.CatmullRomCurve3(Array.from({ length: n + 1 }, (_, i) => full.getPoint(t0 + (t1 - t0) * i / n)));
     return part(new THREE.TubeGeometry(sub, n, r, DET ? 7 : 3, false), hex);
   };
+  // cartoon eye: white, pupil (looking slightly forward), highlight. x = side offset, y, z = front of the head
+  const eye = (m, x, y, z, r, iris = 0x0a0a0a) => !DET ? [ell(r * 0.8, r * 0.85, r * 0.6, m * x, y, z + r * 0.2, 0x101014, { s: 1 })] : [   // far: one dark eye
+    ell(r, r, r * 0.7, m * x, y, z, 0xf7f4ec, { s: 1 }),
+    ell(r * 0.55, r * 0.6, r * 0.4, m * (x + r * 0.08), y, z + r * 0.42, iris, { s: 1 }),
+    ell(r * 0.2, r * 0.2, r * 0.15, m * (x - r * 0.18), y + r * 0.3, z + r * 0.62, 0xffffff, { d: 1, s: 1 }),
+  ];
+  // Chibi "vinyl toy" proportions: big head, big eyes, body resting on the seat (y = 0), feet tucked in.
+  // Patches sit mostly inside the body so they read as smooth colour, not stickers. Scale per species sets the height.
   const SPECIES = {
-    toucan: () => [
-      ell(0.2, 0.3, 0.18, 0, 0.5, -0.02, 0x15151a),                                   // black body
-      ell(0.13, 0.16, 0.09, 0, 0.66, 0.1, 0xfff0bd),                                  // pale throat
-      ell(0.12, 0.12, 0.08, 0, 0.5, 0.11, 0xffc93a),                                  // yellow breast
-      ell(0.15, 0.15, 0.15, 0, 0.92, 0.02, 0x15151a),                                 // head
-      ell(0.075, 0.09, 0.25, 0, 0.9, 0.29, 0xff8a1a, { rx: 0.18 }),                   // the big curved bill
-      ell(0.045, 0.05, 0.08, 0, 0.84, 0.48, 0x141414, { d: 1, s: 1, rx: 0.35 }),            // black bill tip
-      ell(0.03, 0.03, 0.17, 0, 0.98, 0.25, 0xffd23a, { d: 1, s: 1, rx: 0.12 }),             // yellow ridge on top of the bill
-      ...both(m => ell(0.045, 0.045, 0.03, m * 0.1, 0.97, 0.11, 0x3a7bff, { s: 1 })),  // blue eye rings
-      ...both(m => ell(0.02, 0.02, 0.02, m * 0.118, 0.975, 0.13, 0x0a0a0a, { d: 1, s: 1 })), // eyes
-      ...both(m => ell(0.07, 0.25, 0.15, m * 0.185, 0.5, -0.05, 0x22242c, { rz: m * 0.14, rx: -0.12 })),   // wings, folded at the sides
-      ...both(m => ell(0.05, 0.1, 0.09, m * 0.2, 0.3, -0.14, 0x2c3550, { d: 1, s: 1, rz: m * 0.2 })),            // dark blue wing tips
-      ell(0.1, 0.24, 0.05, 0, 0.22, -0.22, 0x15151a, { d: 1, rx: 0.45 }),                   // tail
-      ell(0.08, 0.05, 0.07, 0, 0.2, -0.1, 0xd8202a, { d: 1, s: 1 }),                        // red under the tail
-      ...both(m => ell(0.05, 0.03, 0.07, m * 0.08, 0.04, 0.1, 0x6a87d8, { d: 1, s: 1 })),   // blue-grey feet
-    ],
-    frog: () => [   // red-eyed tree frog, squat (about 2/3 the others' height)
-      ell(0.22, 0.2, 0.21, 0, 0.27, -0.02, 0x37b24a),                                 // body
-      ell(0.15, 0.15, 0.09, 0, 0.28, 0.13, 0xf3e7a0),                                 // cream belly
-      ...both(m => ell(0.09, 0.11, 0.17, m * 0.19, 0.16, -0.02, 0x2f9e40)),           // folded back legs
-      ...both(m => ell(0.075, 0.03, 0.11, m * 0.22, 0.03, 0.13, 0xff8a2a, { d: 1, s: 1 })), // back feet
-      ...both(m => ell(0.04, 0.11, 0.04, m * 0.12, 0.17, 0.15, 0x37b24a, { s: 1, rz: m * 0.15 })),   // front arms
-      ...both(m => ell(0.05, 0.025, 0.06, m * 0.13, 0.03, 0.19, 0xff8a2a, { d: 1, s: 1 })), // front feet
-      ell(0.2, 0.12, 0.17, 0, 0.5, 0.04, 0x37b24a),                                   // wide head
-      ...both(m => ell(0.065, 0.065, 0.065, m * 0.11, 0.6, 0.08, 0xe0242c, { s: 1 })),// big red eyes
-      ...both(m => ell(0.018, 0.04, 0.015, m * 0.128, 0.6, 0.14, 0x0a0a0a, { d: 1, s: 1 })),// slit pupils
-      ell(0.13, 0.012, 0.03, 0, 0.45, 0.19, 0x1f6b2a, { d: 1, s: 1 }),                      // mouth line
-    ],
-    chameleon: () => [
-      ell(0.18, 0.28, 0.21, 0, 0.46, -0.03, 0x4caf3a, { rx: -0.15 }),                 // leaf-green body, leaning in
-      ell(0.192, 0.05, 0.224, 0, 0.47, -0.03, 0xf2d22e, { rx: -0.15 }),               // yellow stripe painted round the body (1 cm proud of it)
-      ell(0.06, 0.04, 0.2, 0, 0.72, -0.08, 0x3d9a30, { d: 1, s: 1, rx: -0.3 }),       // ridge down the back
-      ell(0.13, 0.13, 0.18, 0, 0.82, 0.08, 0x4caf3a),                                 // head
-      ell(0.05, 0.13, 0.12, 0, 0.94, -0.01, 0x3d9a30, { rx: 0.55 }),                  // helmet crest (casque)
-      ...both(m => ell(0.065, 0.065, 0.065, m * 0.115, 0.86, 0.12, 0x8bd35a, { s: 1 })),       // turret eyes
-      ...both(m => ell(0.022, 0.022, 0.022, m * 0.172, 0.86, 0.14, 0x0a0a0a, { d: 1, s: 1 })), // pupils
-      ...both(m => ell(0.07, 0.09, 0.11, m * 0.13, 0.17, -0.04, 0x45a336, { s: 1 })),          // haunches
-      ...both(m => ell(0.04, 0.1, 0.04, m * 0.1, 0.22, 0.15, 0x45a336, { s: 1, rx: 0.35 })),   // short front legs
-      ...both(m => ell(0.05, 0.025, 0.055, m * 0.1, 0.11, 0.2, 0x2f7f26, { d: 1, s: 1 })),     // gripping hands
-      // tail: out from the back, round to the right side, then the classic spiral curl beside the body
-      tube((() => { const pts = [[0.02, 0.24, -0.2], [0.14, 0.2, -0.24], [0.25, 0.2, -0.14]];
-        for (let i = 0; i <= 16; i++) { const a = -0.6 - i / 16 * PI * 3, r = 0.16 * (1 - i / 16 * 0.75); pts.push([0.28, 0.3 + r * Math.sin(a), 0.0 + r * Math.cos(a)]); }
-        return pts; })(), 0.04, 0x4caf3a, 0, 1, { far: 10 }),
-    ],
-    lemur: () => {
+    toucan: { scale: 1.3, parts: () => [
+      ell(0.2, 0.25, 0.19, 0, 0.27, -0.01, 0x15151a, { paint: (x, y, z) => z > 0.35 && Math.abs(x) < 0.7 ? (y > 0.45 ? 0xfff1c4 : 0xffcf3a) : null }),   // black body, yellow breast, pale throat
+      ell(0.17, 0.16, 0.16, 0, 0.6, 0.02, 0x15151a),                                   // head
+      ...both(m => ell(0.07, 0.07, 0.04, m * 0.085, 0.64, 0.12, 0x3a7bff, { s: 1 })),           // blue skin round the eyes
+      ...both(m => eye(m, 0.085, 0.645, 0.135, 0.045)),
+      ell(0.085, 0.1, 0.25, 0, 0.58, 0.3, 0xff8a1a, { rx: 0.22 }),                     // big bill
+      ell(0.035, 0.03, 0.17, 0, 0.67, 0.27, 0xffd23a, { d: 1, s: 1, rx: 0.15 }),            // yellow ridge
+      ell(0.05, 0.05, 0.07, 0, 0.53, 0.5, 0x15151a, { s: 1, rx: 0.4 }),               // black bill tip
+      ...both(m => ell(0.07, 0.17, 0.14, m * 0.185, 0.27, -0.03, 0x24262e, { rz: m * 0.22 })),   // folded wings
+      ...both(m => ell(0.05, 0.07, 0.08, m * 0.2, 0.14, -0.1, 0x2c3550, { d: 1, s: 1, rz: m * 0.3 })),   // blue-black wing tips
+      ell(0.09, 0.17, 0.04, 0, 0.1, -0.22, 0x15151a, { rx: 1.05 }),                   // tail resting on the seat
+      ell(0.07, 0.04, 0.06, 0, 0.06, -0.12, 0xd8202a, { d: 1, s: 1 }),                // red under the tail
+      ...both(m => ell(0.045, 0.025, 0.065, m * 0.07, 0.025, 0.13, 0x6a87d8, { d: 1, s: 1 })),   // feet, tucked under the front
+    ] },
+    frog: { scale: 1.1, parts: () => [   // red-eyed tree frog
+      ell(0.23, 0.19, 0.21, 0, 0.19, 0, 0x37b24a, { paint: (x, y, z) => z > 0.4 && Math.abs(x) < 0.7 ? 0xf3e7a0 : Math.abs(x) > 0.8 && y < 0.3 ? 0x2a6fd6 : null }),   // green body, cream belly, blue flanks
+      ...both(m => ell(0.1, 0.1, 0.16, m * 0.19, 0.1, -0.01, 0x2f9e40)),              // folded back legs
+      ...both(m => ell(0.08, 0.025, 0.1, m * 0.22, 0.02, 0.12, 0xff8a2a, { d: 1, s: 1 })),  // back feet
+      ...both(m => ell(0.04, 0.08, 0.04, m * 0.11, 0.1, 0.17, 0x37b24a, { d: 1, s: 1, rz: m * 0.15 })),   // front arms
+      ...both(m => ell(0.05, 0.022, 0.06, m * 0.12, 0.02, 0.2, 0xff8a2a, { d: 1, s: 1 })),  // front feet
+      ell(0.23, 0.15, 0.2, 0, 0.42, 0.04, 0x37b24a),                                   // wide head
+      ...both(m => ell(0.085, 0.085, 0.08, m * 0.12, 0.54, 0.08, 0xe0242c)),          // big red eyes on top
+      ...both(m => ell(0.022, 0.05, 0.018, m * 0.13, 0.545, 0.155, 0x0a0a0a, { s: 1 })),   // slit pupils
+      ...both(m => ell(0.016, 0.016, 0.012, m * 0.105, 0.575, 0.15, 0xffffff, { d: 1, s: 1 })), // highlights
+      ell(0.12, 0.012, 0.035, 0, 0.375, 0.215, 0x1f6b2a, { d: 1, s: 1 }),             // smile
+    ] },
+    chameleon: { scale: 1.3, parts: () => [
+      ell(0.18, 0.24, 0.22, 0, 0.26, -0.03, 0x4caf3a, { rx: -0.2, paint: (x, y, z) => z > 0.55 && Math.abs(x) < 0.6 ? 0xa6dc5a : Math.abs(y + 0.05) < 0.16 && Math.abs(x) > 0.55 ? 0xf2d22e : null }),   // green body, pale belly, yellow side stripe
+      ell(0.05, 0.035, 0.18, 0, 0.47, -0.09, 0x3d9a30, { d: 1, s: 1, rx: -0.35 }),    // ridge down the back
+      ell(0.14, 0.13, 0.17, 0, 0.58, 0.07, 0x4caf3a),                                  // head
+      ell(0.055, 0.12, 0.11, 0, 0.7, -0.02, 0x3d9a30, { rx: 0.6 }),                    // helmet crest
+      ...both(m => ell(0.075, 0.075, 0.075, m * 0.11, 0.61, 0.12, 0x6fbf45)),         // turret eyes
+      ...both(m => eye(m, 0.13, 0.615, 0.17, 0.04)),
+      ...both(m => ell(0.07, 0.08, 0.1, m * 0.13, 0.09, -0.06, 0x45a336, { d: 1, s: 1 })),  // haunches
+      ...both(m => ell(0.038, 0.09, 0.038, m * 0.1, 0.1, 0.14, 0x45a336, { s: 1, rx: 0.3 })),   // front legs
+      ...both(m => ell(0.05, 0.022, 0.05, m * 0.1, 0.02, 0.18, 0x2f7f26, { d: 1, s: 1 })),      // gripping hands
+      // tail: out from the back, round to the right side, then the classic spiral curl
+      tube((() => { const pts = [[0.02, 0.12, -0.2], [0.14, 0.1, -0.24], [0.25, 0.12, -0.14]];
+        for (let i = 0; i <= 16; i++) { const a = -0.6 - i / 16 * PI * 3, r = 0.14 * (1 - i / 16 * 0.75); pts.push([0.27, 0.2 + r * Math.sin(a), 0.0 + r * Math.cos(a)]); }
+        return pts; })(), 0.038, 0x4caf3a, 0, 1, { far: 10 }),
+    ] },
+    lemur: { scale: 1.3, parts: () => {
       const parts = [
-        ell(0.19, 0.3, 0.18, 0, 0.52, -0.02, 0x8d8f93),                               // grey body
-        ell(0.12, 0.2, 0.08, 0, 0.55, 0.11, 0xe9e6df),                                // pale belly
-        ell(0.15, 0.14, 0.14, 0, 0.92, 0.02, 0x8d8f93),                               // head
-        ell(0.12, 0.1, 0.07, 0, 0.9, 0.1, 0xf2f0ea),                                  // white face
-        ell(0.05, 0.045, 0.08, 0, 0.86, 0.16, 0x2a2a2e, { s: 1 }),                    // dark nose
-        ...both(m => ell(0.048, 0.045, 0.03, m * 0.056, 0.95, 0.14, 0x2a2a2e, { s: 1 })),   // dark eye patches
-        ...both(m => ell(0.025, 0.025, 0.02, m * 0.06, 0.955, 0.163, 0xffa21a, { d: 1, s: 1 })),  // amber eyes
-        ...both(m => ell(0.04, 0.06, 0.025, m * 0.12, 1.04, -0.02, 0x7a7c80, { d: 1, s: 1, rz: m * -0.4 })), // ears
-        ...both(m => ell(0.05, 0.18, 0.05, m * 0.17, 0.45, 0.06, 0x8d8f93, { s: 1, rz: m * 0.12 })),  // arms
-        ...both(m => ell(0.045, 0.03, 0.05, m * 0.17, 0.28, 0.12, 0x2a2a2e, { d: 1, s: 1 })),             // hands
+        ell(0.2, 0.24, 0.18, 0, 0.26, -0.01, 0x8d8f93, { paint: (x, y, z) => z > 0.55 && Math.abs(x) < 0.55 && y < 0.6 ? 0xe9e6df : null }),   // grey body, pale belly
+        ell(0.17, 0.15, 0.15, 0, 0.61, 0.02, 0x8d8f93, { paint: (x, y, z) => z > 0.3 && y < 0.55 ? 0xf2f0ea : null }),   // grey head, white face
+        ...both(m => ell(0.06, 0.055, 0.035, m * 0.062, 0.63, 0.13, 0x2a2a2e)),       // dark eye patches
+        ...both(m => eye(m, 0.064, 0.635, 0.15, 0.036, 0xff9a10)),                     // big amber eyes
+        ell(0.04, 0.032, 0.05, 0, 0.56, 0.16, 0x2a2a2e, { d: 1, s: 1 }),                     // nose
+        ...both(m => ell(0.05, 0.07, 0.03, m * 0.13, 0.74, -0.01, 0x7a7c80, { s: 1, rz: m * -0.45 })),   // ears
+        ...both(m => ell(0.05, 0.13, 0.05, m * 0.16, 0.25, 0.07, 0x8d8f93, { s: 1, rz: m * 0.2 })),    // arms
+        ...both(m => ell(0.04, 0.025, 0.045, m * 0.15, 0.13, 0.14, 0x2a2a2e, { d: 1, s: 1 })),         // hands
+        ...both(m => ell(0.05, 0.025, 0.07, m * 0.08, 0.02, 0.13, 0x2a2a2e, { d: 1, s: 1 })),               // feet
       ];
-      // ringed tail: out from the back, round to the right side, then up beside the body with a forward curl at the top.
-      // 9 tube segments along one path with small gaps, alternating white and black, black tip.
-      const TP = [[0.02, 0.24, -0.18], [0.16, 0.2, -0.22], [0.28, 0.26, -0.1], [0.3, 0.55, -0.06], [0.29, 0.9, -0.05], [0.27, 1.18, 0.0], [0.24, 1.32, 0.1]];
+      // ringed tail: out from the back, round to the right side, then up beside the body with a curl
+      const TP = [[0.02, 0.12, -0.16], [0.16, 0.1, -0.2], [0.27, 0.16, -0.1], [0.29, 0.4, -0.06], [0.28, 0.68, -0.05], [0.26, 0.9, 0.0], [0.23, 1.0, 0.09]];
       const NR = DET ? 9 : 5;
-      for (let k = 0; k < NR; k++) parts.push(tube(TP, 0.055 - k * 0.002 * 9 / NR, k % 2 ? 0x1c1c20 : 0xf2f0ea, k / NR + 0.004, (k + 1) / NR - 0.004));
-      parts.push(ell(0.05, 0.05, 0.05, 0.24, 1.32, 0.1, 0x1c1c20, { s: 1 }));
+      for (let k = 0; k < NR; k++) parts.push(tube(TP, 0.05 - k * 0.0015 * 9 / NR, k % 2 ? 0x1c1c20 : 0xf2f0ea, k / NR + 0.004, (k + 1) / NR - 0.004));
+      parts.push(ell(0.045, 0.045, 0.045, 0.23, 1.0, 0.09, 0x1c1c20, { s: 1 }));
       return parts;
-    },
+    } },
   };
   const SPECIES_KEYS = Object.keys(SPECIES);
-  const speciesGeo = (k, det) => { DET = det; const g = mergeGeometries(SPECIES[k]().filter(Boolean)); DET = true; return g; };
+  const speciesGeo = (k, det) => { DET = det; const S = SPECIES[k], g = mergeGeometries(S.parts().flat().filter(Boolean)); g.scale(S.scale, S.scale, S.scale); DET = true; return g; };
   const speciesOf = p => SPECIES_KEYS[Math.floor(p.seed * 9973) % 4];
   // Near animals use the full version, the rest the light one. Re-sorted every 0.25 s while the camera moves.
   const NEAR = isMobile ? 12 : weakGPU ? 16 : 24, NEAR2 = NEAR * NEAR;
@@ -1128,7 +1141,7 @@ const crowd = (() => {
     aSets = SPECIES_KEYS.map(k => {
       const list = people.filter(p => speciesOf(p) === k), n = list.length;
       const mats = new Float32Array(n * 16), seeds = new Float32Array(n), angs = new Float32Array(n), cols = new Float32Array(n * 3), pos = new Float32Array(n * 3);
-      list.forEach((p, i) => { q.setFromAxisAngle(UP, p.a + PI); const sz = 0.92 + p.seed * 0.18; sc.set(sz, sz, sz);
+      list.forEach((p, i) => { q.setFromAxisAngle(UP, p.a + PI + (((p.seed * 7919) % 1) - 0.5) * 0.6); const sz = 0.92 + p.seed * 0.18; sc.set(sz, sz, sz);
         const at = polar(p.r, p.y, p.a); M4.compose(at, q, sc); M4.toArray(mats, i * 16); at.toArray(pos, i * 3);
         seeds[i] = p.seed; angs[i] = p.a; colOf(p).toArray(cols, i * 3); });
       const mk = det => { const geo = speciesGeo(k, det), m = new THREE.InstancedMesh(geo, animalMat, Math.max(1, n));
